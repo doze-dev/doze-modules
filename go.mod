@@ -41,7 +41,7 @@ require (
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
-	github.com/nerdmenot/doze-sdk v0.0.0-20260626081915-7930d3e8e35f
+	github.com/nerdmenot/doze-sdk v0.0.0-20260626131203-f59ea1c235cf
 	github.com/oklog/run v1.1.0 // indirect
 	github.com/zclconf/go-cty v1.18.1 // indirect
 	golang.org/x/mod v0.32.0 // indirect

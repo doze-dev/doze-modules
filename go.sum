@@ -76,8 +76,8 @@ github.com/mattn/go-isatty v0.0.20 h1:xfD0iDuEKnDkl03q4limB+vH+GxLEtL/jb4xVJSWWE
 github.com/mattn/go-isatty v0.0.20/go.mod h1:W+V8PltTTMOvKvAeJH7IuucS94S2C6jfK/D7dTCTo3Y=
 github.com/mitchellh/go-wordwrap v1.0.1 h1:TLuKupo69TCn6TQSyGxwI1EblZZEsQ0vMlAFQflz0v0=
 github.com/mitchellh/go-wordwrap v1.0.1/go.mod h1:R62XHJLzvMFRBbcrT7m7WgmE1eOyTSsCt+hzestvNj0=
-github.com/nerdmenot/doze-sdk v0.0.0-20260626081915-7930d3e8e35f h1:4phhQzuOeeohjpdvqPspklHP828jO5NVeJNGZOudVU8=
-github.com/nerdmenot/doze-sdk v0.0.0-20260626081915-7930d3e8e35f/go.mod h1:iATcdKAbG9WZtz1cSaPFLghGmstk30nk3Ps+WwQ/CN8=
+github.com/nerdmenot/doze-sdk v0.0.0-20260626131203-f59ea1c235cf h1:cr7ifcvvLpsMOYQ2nLm/LUOIWJAGs91vRpX4RvE/V8I=
+github.com/nerdmenot/doze-sdk v0.0.0-20260626131203-f59ea1c235cf/go.mod h1:iATcdKAbG9WZtz1cSaPFLghGmstk30nk3Ps+WwQ/CN8=
 github.com/oklog/run v1.1.0 h1:GEenZ1cK0+q0+wsJew9qUg/DyD8k3JzYsZAi5gYi2mA=
 github.com/oklog/run v1.1.0/go.mod h1:sVPdnTZT1zYwAJeCMu2Th4T21pA3FPOQRfWjQlk7DVU=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
