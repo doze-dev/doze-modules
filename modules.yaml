@@ -23,7 +23,7 @@ modules:
   valkey:     { path: ./modules/valkey/plugin,    version: "0.1.0" }
   kvrocks:    { path: ./modules/kvrocks/plugin,   version: "0.1.0" }
   postgres:   { path: ./engine/postgres/plugin,   version: "0.1.0" }
-  documentdb: { path: ./engine/documentdb/plugin, version: "0.1.0" }
+  documentdb: { path: ./modules/documentdb/plugin, version: "0.1.0" }
   s3:         { path: ./modules/s3/plugin,        version: "0.1.0" }
   sqs:        { path: ./modules/sqs/plugin,       version: "0.1.0" }
   sns:        { path: ./modules/sns/plugin,       version: "0.1.0" }
