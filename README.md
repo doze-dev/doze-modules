@@ -1,6 +1,6 @@
 # doze-modules
 
-Out-of-process engine **plugins** for [doze](https://github.com/NerdMeNot/doze).
+Out-of-process engine **plugins** for [doze](https://github.com/doze-dev/doze).
 Each module is a pure-Go plugin binary that speaks doze's engine gRPC protocol;
 doze fetches one by engine type, verifies its checksum, caches it under
 `~/.doze/modules`, and runs it as a subprocess. This is the Terraform *provider*

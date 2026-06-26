@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/awslocal"
 )
 
 func logf(format string, args ...any) {

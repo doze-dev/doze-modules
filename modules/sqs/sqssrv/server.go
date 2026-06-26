@@ -17,7 +17,7 @@ import (
 
 	bolt "go.etcd.io/bbolt"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/awslocal"
 )
 
 // sweepInterval is how often the background janitor reclaims expired messages

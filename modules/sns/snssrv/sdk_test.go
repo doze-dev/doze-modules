@@ -19,7 +19,7 @@ import (
 	sqstypes "github.com/aws/aws-sdk-go-v2/service/sqs/types"
 	bolt "go.etcd.io/bbolt"
 
-	"github.com/NerdMeNot/doze-modules/modules/sqs/sqssrv"
+	"github.com/doze-dev/doze-modules/modules/sqs/sqssrv"
 )
 
 var creds = credentials.NewStaticCredentialsProvider("test", "test", "")

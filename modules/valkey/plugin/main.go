@@ -6,8 +6,8 @@ package main
 import (
 	"encoding/gob"
 
-	"github.com/NerdMeNot/doze-modules/modules/valkey"
-	dozeplugin "github.com/nerdmenot/doze-sdk/plugin"
+	"github.com/doze-dev/doze-modules/modules/valkey"
+	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
 func main() {

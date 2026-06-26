@@ -5,9 +5,9 @@
 package s3
 
 import (
-	"github.com/NerdMeNot/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/awslocal"
 
-	_ "github.com/NerdMeNot/doze-modules/modules/s3/s3srv" // register the s3 service factory
+	_ "github.com/doze-dev/doze-modules/modules/s3/s3srv" // register the s3 service factory
 )
 
 // New returns the configured s3 driver (BaseDriver populated).

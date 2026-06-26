@@ -5,7 +5,7 @@ import (
 
 	"github.com/hashicorp/hcl/v2/hclparse"
 
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // decodeBody parses an HCL body for the documentdb block under test.

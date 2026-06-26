@@ -5,9 +5,9 @@
 package sqs
 
 import (
-	"github.com/NerdMeNot/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/awslocal"
 
-	_ "github.com/NerdMeNot/doze-modules/modules/sqs/sqssrv" // register the sqs service factory
+	_ "github.com/doze-dev/doze-modules/modules/sqs/sqssrv" // register the sqs service factory
 )
 
 // New returns the configured sqs driver (BaseDriver populated).

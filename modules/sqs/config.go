@@ -9,8 +9,8 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-modules/awslocal"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // Config is the decoded `sqs "<name>" { … }` block.

@@ -8,10 +8,10 @@
 package sns
 
 import (
-	"github.com/NerdMeNot/doze-modules/awslocal"
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-modules/awslocal"
+	"github.com/doze-dev/doze-sdk/engine"
 
-	_ "github.com/NerdMeNot/doze-modules/modules/sns/snssrv" // register the sns service factory
+	_ "github.com/doze-dev/doze-modules/modules/sns/snssrv" // register the sns service factory
 )
 
 // New returns the configured sns driver (BaseDriver populated, incl. childEnv).

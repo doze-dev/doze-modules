@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // Object kinds tracked in the state file for plan/apply/destroy. Grants are

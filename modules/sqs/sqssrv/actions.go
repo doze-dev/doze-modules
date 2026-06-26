@@ -3,7 +3,7 @@ package sqssrv
 import (
 	"strconv"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/awslocal"
 )
 
 // handler implements one SQS action against the store. Returns the result value

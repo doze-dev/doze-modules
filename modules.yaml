@@ -3,7 +3,7 @@
 # Each module is an out-of-process doze engine plugin — a pure-Go binary built
 # from its source in this repo (modules/<name>/) and published as its own rolling
 # release under
-#   https://github.com/NerdMeNot/doze-modules/releases/download/<name>/
+#   https://github.com/doze-dev/doze-modules/releases/download/<name>/
 # with an index.yaml + per-platform archives. doze fetches a module by engine
 # type, verifies its checksum, caches it under ~/.doze/modules, and runs it.
 #

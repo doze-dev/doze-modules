@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-modules/awslocal"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // Converge implements engine.Converger: create each declared bucket (idempotent)

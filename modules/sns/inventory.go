@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-modules/awslocal"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // Objects implements engine.Inventory: each declared topic is a tracked object.

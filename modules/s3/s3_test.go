@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
-	"github.com/NerdMeNot/doze-modules/modules/s3/s3srv"
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/modules/s3/s3srv"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // TestConvergeAndObjectIO proves the S3 integration end to end over a unix

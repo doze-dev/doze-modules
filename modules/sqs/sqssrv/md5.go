@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/awslocal"
 )
 
 func queueARN(name string) string { return awslocal.ARN("sqs", name) }

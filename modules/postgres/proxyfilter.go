@@ -10,7 +10,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // Postgres startup-phase request codes (appear in place of the protocol version).

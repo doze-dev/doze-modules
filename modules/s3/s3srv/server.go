@@ -18,7 +18,7 @@ import (
 	"github.com/johannesboyne/gofakes3/backend/s3bolt"
 	bolt "go.etcd.io/bbolt"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/awslocal"
 )
 
 func init() { awslocal.RegisterServer("s3", New) }

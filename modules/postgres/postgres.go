@@ -14,7 +14,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // nominalPort names each backend's unix socket file (.s.PGSQL.<port>). No TCP

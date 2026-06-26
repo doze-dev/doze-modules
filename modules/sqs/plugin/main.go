@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
-	"github.com/NerdMeNot/doze-modules/modules/sqs"
-	dozeplugin "github.com/nerdmenot/doze-sdk/plugin"
+	"github.com/doze-dev/doze-modules/awslocal"
+	"github.com/doze-dev/doze-modules/modules/sqs"
+	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
 func main() {

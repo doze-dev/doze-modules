@@ -9,8 +9,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/NerdMeNot/doze-modules/awslocal"
-	"github.com/nerdmenot/doze-sdk/engine"
+	"github.com/doze-dev/doze-modules/awslocal"
+	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // Admin: expose each declared bucket's object count/size and let the dash/CLI
