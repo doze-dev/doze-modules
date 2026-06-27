@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -124,35 +125,72 @@ func resolveExtSource(baseDir, source string) string {
 }
 
 func convergeRole(ctx context.Context, psql *psqlRunner, role Role) error {
+	opts := roleOptions(role)
+	// Create the role if absent, else alter it to match. Roles live in the
+	// cluster-global pg_authid catalog, so two convergence passes over the same
+	// cluster (e.g. a boot-time converge racing a lazy-connect converge) can
+	// momentarily fail catalog DDL with "tuple concurrently updated" — execRetry
+	// rides that out. A lost CREATE race (another session created the role first)
+	// surfaces as "already exists" and falls back to ALTER.
 	exists, err := psql.scalarBool(ctx, "postgres",
 		fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM pg_roles WHERE rolname = %s)", sqlLit(role.Name)))
 	if err != nil {
 		return err
 	}
-	verb := "CREATE ROLE"
-	if exists {
-		verb = "ALTER ROLE"
+	needAlter := exists
+	if !exists {
+		switch cErr := psql.execRetry(ctx, "postgres", fmt.Sprintf("CREATE ROLE %s WITH %s", sqlIdent(role.Name), opts)); {
+		case cErr == nil:
+			// created with the full option set; no ALTER needed
+		case roleExistsErr(cErr):
+			needAlter = true // created concurrently between the check and the CREATE
+		default:
+			return cErr
+		}
 	}
-	if err := psql.exec(ctx, "postgres", fmt.Sprintf("%s %s WITH %s", verb, sqlIdent(role.Name), roleOptions(role))); err != nil {
-		return err
+	if needAlter {
+		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("ALTER ROLE %s WITH %s", sqlIdent(role.Name), opts)); err != nil {
+			return err
+		}
 	}
 	for _, parent := range role.MemberOf {
-		if err := psql.exec(ctx, "postgres", fmt.Sprintf("GRANT %s TO %s", sqlIdent(parent), sqlIdent(role.Name))); err != nil {
+		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("GRANT %s TO %s", sqlIdent(parent), sqlIdent(role.Name))); err != nil {
 			return fmt.Errorf("granting membership in %q: %w", parent, err)
 		}
 	}
 	// Per-role parameters: ALTER ROLE … SET key = value (search_path, timeouts, …).
 	for _, k := range sortedKeys(role.Config) {
-		if err := psql.exec(ctx, "postgres", fmt.Sprintf("ALTER ROLE %s SET %s = %s", sqlIdent(role.Name), sqlIdent(k), sqlLit(role.Config[k]))); err != nil {
+		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("ALTER ROLE %s SET %s = %s", sqlIdent(role.Name), sqlIdent(k), sqlLit(role.Config[k]))); err != nil {
 			return fmt.Errorf("setting role parameter %q: %w", k, err)
 		}
 	}
 	if role.Comment != "" {
-		if err := psql.exec(ctx, "postgres", fmt.Sprintf("COMMENT ON ROLE %s IS %s", sqlIdent(role.Name), sqlLit(role.Comment))); err != nil {
+		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("COMMENT ON ROLE %s IS %s", sqlIdent(role.Name), sqlLit(role.Comment))); err != nil {
 			return fmt.Errorf("commenting role: %w", err)
 		}
 	}
 	return nil
+}
+
+// roleExistsErr reports a CREATE ROLE that lost a race to a concurrent creator
+// (SQLSTATE 42710, "role ... already exists") — recoverable by switching to ALTER.
+func roleExistsErr(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "already exists")
+}
+
+// transientConvergeErr reports catalog-contention errors that are safe to retry:
+// concurrent DDL touching the same shared-catalog row (roles in pg_authid,
+// databases in pg_database) can momentarily fail with "tuple concurrently
+// updated"/"deleted", and heavy concurrency can deadlock. The statements we run
+// are idempotent, so re-running is correct.
+func transientConvergeErr(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "tuple concurrently updated") ||
+		strings.Contains(msg, "tuple concurrently deleted") ||
+		strings.Contains(msg, "deadlock detected")
 }
 
 func roleOptions(r Role) string {
@@ -231,7 +269,7 @@ func convergeDatabase(ctx context.Context, psql *psqlRunner, name string, cfg *C
 			return fmt.Errorf("creating: %w", err)
 		}
 	} else if cfg.Owner != "" {
-		if err := psql.exec(ctx, "postgres", fmt.Sprintf("ALTER DATABASE %s OWNER TO %s", sqlIdent(name), sqlIdent(cfg.Owner))); err != nil {
+		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("ALTER DATABASE %s OWNER TO %s", sqlIdent(name), sqlIdent(cfg.Owner))); err != nil {
 			return fmt.Errorf("setting owner: %w", err)
 		}
 	}
@@ -248,12 +286,12 @@ func convergeDatabase(ctx context.Context, psql *psqlRunner, name string, cfg *C
 		alter = append(alter, "ALLOW_CONNECTIONS false")
 	}
 	if len(alter) > 0 {
-		if err := psql.exec(ctx, "postgres", fmt.Sprintf("ALTER DATABASE %s WITH %s", sqlIdent(name), strings.Join(alter, " "))); err != nil {
+		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("ALTER DATABASE %s WITH %s", sqlIdent(name), strings.Join(alter, " "))); err != nil {
 			return fmt.Errorf("setting options: %w", err)
 		}
 	}
 	if cfg.Comment != "" {
-		if err := psql.exec(ctx, "postgres", fmt.Sprintf("COMMENT ON DATABASE %s IS %s", sqlIdent(name), sqlLit(cfg.Comment))); err != nil {
+		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("COMMENT ON DATABASE %s IS %s", sqlIdent(name), sqlLit(cfg.Comment))); err != nil {
 			return fmt.Errorf("commenting database: %w", err)
 		}
 	}
@@ -268,15 +306,15 @@ func convergeGrant(ctx context.Context, psql *psqlRunner, dbName string, g Grant
 	}
 	switch {
 	case g.Database != "":
-		return psql.exec(ctx, "postgres", fmt.Sprintf("GRANT %s ON DATABASE %s TO %s%s", privs, sqlIdent(g.Database), sqlIdent(g.Role), wgo))
+		return psql.execRetry(ctx, "postgres", fmt.Sprintf("GRANT %s ON DATABASE %s TO %s%s", privs, sqlIdent(g.Database), sqlIdent(g.Role), wgo))
 	case g.Objects != "":
 		kind := strings.ToUpper(g.Objects)
-		if err := psql.exec(ctx, dbName, fmt.Sprintf("GRANT %s ON ALL %s IN SCHEMA %s TO %s%s", privs, kind, sqlIdent(g.Schema), sqlIdent(g.Role), wgo)); err != nil {
+		if err := psql.execRetry(ctx, dbName, fmt.Sprintf("GRANT %s ON ALL %s IN SCHEMA %s TO %s%s", privs, kind, sqlIdent(g.Schema), sqlIdent(g.Role), wgo)); err != nil {
 			return err
 		}
-		return psql.exec(ctx, dbName, fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT %s ON %s TO %s%s", sqlIdent(g.Schema), privs, kind, sqlIdent(g.Role), wgo))
+		return psql.execRetry(ctx, dbName, fmt.Sprintf("ALTER DEFAULT PRIVILEGES IN SCHEMA %s GRANT %s ON %s TO %s%s", sqlIdent(g.Schema), privs, kind, sqlIdent(g.Role), wgo))
 	default:
-		return psql.exec(ctx, dbName, fmt.Sprintf("GRANT %s ON SCHEMA %s TO %s%s", privs, sqlIdent(g.Schema), sqlIdent(g.Role), wgo))
+		return psql.execRetry(ctx, dbName, fmt.Sprintf("GRANT %s ON SCHEMA %s TO %s%s", privs, sqlIdent(g.Schema), sqlIdent(g.Role), wgo))
 	}
 }
 
@@ -296,6 +334,29 @@ func (p *psqlRunner) base(db string) []string {
 
 func (p *psqlRunner) exec(ctx context.Context, db, sql string) error {
 	_, err := p.output(ctx, append(p.base(db), "-c", sql))
+	return err
+}
+
+// execRetry runs an idempotent convergence statement, retrying with a short
+// capped backoff while it fails with a transient catalog-contention error (see
+// transientConvergeErr). Any other error — or success — returns immediately.
+func (p *psqlRunner) execRetry(ctx context.Context, db, sql string) error {
+	const attempts = 6
+	var err error
+	for i := 0; i < attempts; i++ {
+		if err = p.exec(ctx, db, sql); err == nil || !transientConvergeErr(err) {
+			return err
+		}
+		delay := time.Duration(50*(1<<i)) * time.Millisecond
+		if delay > 800*time.Millisecond {
+			delay = 800 * time.Millisecond
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(delay):
+		}
+	}
 	return err
 }
 
