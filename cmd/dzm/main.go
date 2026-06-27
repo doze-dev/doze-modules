@@ -29,11 +29,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// allTriples are the supported platforms (mac+linux, 64-bit, no intel-mac drop —
-// kept in sync with internal/binaries.targetTriple in doze).
+// allTriples are the supported platforms: Apple Silicon mac + 64-bit Linux. Intel
+// Mac (darwin/amd64) is intentionally unsupported — kept in sync with the SDK's
+// binaries.targetTriple.
 var allTriples = map[string][2]string{ // triple -> {GOOS, GOARCH}
 	"aarch64-apple-darwin":      {"darwin", "arm64"},
-	"x86_64-apple-darwin":       {"darwin", "amd64"},
 	"aarch64-unknown-linux-gnu": {"linux", "arm64"},
 	"x86_64-unknown-linux-gnu":  {"linux", "amd64"},
 }
