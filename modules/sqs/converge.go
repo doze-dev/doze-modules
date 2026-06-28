@@ -17,14 +17,18 @@ import (
 // needs no AWS SDK. RedrivePolicy is part of each queue's attributes.
 func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolchain, ep engine.Endpoint) error {
 	cfg, ok := inst.Spec.(*Config)
-	if !ok || cfg == nil || len(cfg.Queues) == 0 {
+	if !ok || cfg == nil {
 		return nil
 	}
 	client := awslocal.UnixHTTPClient(ep.Backend)
-	for _, q := range cfg.Queues {
-		if err := createQueue(ctx, client, q); err != nil {
-			return fmt.Errorf("queue %q: %w", q.Name, err)
+	// Create the dead-letter queue first so the primary's redrive target exists.
+	if cfg.DeadLetter != nil {
+		if err := createQueue(ctx, client, *cfg.DeadLetter); err != nil {
+			return fmt.Errorf("dead-letter queue %q: %w", cfg.DeadLetter.Name, err)
 		}
+	}
+	if err := createQueue(ctx, client, cfg.Queue); err != nil {
+		return fmt.Errorf("queue %q: %w", cfg.Queue.Name, err)
 	}
 	return nil
 }

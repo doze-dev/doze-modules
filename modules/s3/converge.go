@@ -16,19 +16,18 @@ import (
 // backend unix socket — CreateBucket is `PUT /<bucket>` — so it needs no AWS SDK.
 func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolchain, ep engine.Endpoint) error {
 	cfg, ok := inst.Spec.(*Config)
-	if !ok || cfg == nil || len(cfg.Buckets) == 0 {
+	if !ok || cfg == nil {
 		return nil
 	}
 	client := awslocal.UnixHTTPClient(ep.Backend)
-	for _, b := range cfg.Buckets {
-		if err := createBucket(ctx, client, b.Name); err != nil {
-			return fmt.Errorf("bucket %q: %w", b.Name, err)
-		}
-		if b.Versioning {
-			if err := enableVersioning(ctx, client, b.Name); err != nil {
-				// The bolt backend does not support versioning; warn, don't fail.
-				Logf("warning: s3 %q: could not enable versioning on %q (backend limitation): %v", inst.Name, b.Name, err)
-			}
+	b := cfg.Bucket
+	if err := createBucket(ctx, client, b.Name); err != nil {
+		return fmt.Errorf("bucket %q: %w", b.Name, err)
+	}
+	if b.Versioning {
+		if err := enableVersioning(ctx, client, b.Name); err != nil {
+			// The bolt backend does not support versioning; warn, don't fail.
+			Logf("warning: s3 %q: could not enable versioning on %q (backend limitation): %v", inst.Name, b.Name, err)
 		}
 	}
 	return nil

@@ -19,10 +19,11 @@ func (Driver) Objects(inst engine.Instance) []engine.Object {
 	if !ok || cfg == nil {
 		return nil
 	}
-	objs := make([]engine.Object, 0, len(cfg.Queues))
-	for _, q := range cfg.Queues {
-		objs = append(objs, engine.Object{Kind: "queue", Name: q.Name, Hash: engine.HashOf(q)})
+	var objs []engine.Object
+	if cfg.DeadLetter != nil {
+		objs = append(objs, engine.Object{Kind: "queue", Name: cfg.DeadLetter.Name, Hash: engine.HashOf(*cfg.DeadLetter)})
 	}
+	objs = append(objs, engine.Object{Kind: "queue", Name: cfg.Queue.Name, Hash: engine.HashOf(cfg.Queue)})
 	return objs
 }
 

@@ -18,11 +18,7 @@ func (Driver) Objects(inst engine.Instance) []engine.Object {
 	if !ok || cfg == nil {
 		return nil
 	}
-	objs := make([]engine.Object, 0, len(cfg.Topics))
-	for _, name := range cfg.Topics {
-		objs = append(objs, engine.Object{Kind: "topic", Name: name, Hash: engine.HashOf(name)})
-	}
-	return objs
+	return []engine.Object{{Kind: "topic", Name: cfg.Topic, Hash: engine.HashOf(cfg.Topic)}}
 }
 
 // Prune implements engine.Pruner: delete topics no longer declared.

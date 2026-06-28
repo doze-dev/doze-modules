@@ -46,25 +46,33 @@ func (Driver) Actions() []engine.Action {
 	}
 }
 
-// Resources lists declared queues with a live depth/in-flight status line.
+// Resources reports the queue (and its dead-letter companion, if any) with a live
+// depth/in-flight status line. The DLQ is marked so the dash can show it dimmed.
 func (Driver) Resources(ctx context.Context, inst engine.Instance, ep engine.Endpoint) ([]engine.Resource, error) {
 	cfg, ok := inst.Spec.(*Config)
 	if !ok || cfg == nil {
 		return nil, nil
 	}
 	client := awslocal.UnixHTTPClient(ep.Backend)
-	out := make([]engine.Resource, 0, len(cfg.Queues))
-	for _, q := range cfg.Queues {
+	res := func(q QueueDecl, isDLQ bool) engine.Resource {
 		var r struct {
 			Attributes map[string]string `json:"Attributes"`
 		}
 		// A queue that hasn't converged yet just shows an empty status.
 		_ = sqsCall(ctx, client, "GetQueueAttributes",
 			map[string]any{"QueueName": q.Name, "AttributeNames": []string{"All"}}, &r)
-		out = append(out, engine.Resource{
-			Kind: "queue", Name: q.Name,
-			Status: queueStatus(r.Attributes), Info: queueInfo(r.Attributes),
-		})
+		info := queueInfo(r.Attributes)
+		if isDLQ {
+			if info == nil {
+				info = map[string]string{}
+			}
+			info["dlq"] = "true"
+		}
+		return engine.Resource{Kind: "queue", Name: q.Name, Status: queueStatus(r.Attributes), Info: info}
+	}
+	out := []engine.Resource{res(cfg.Queue, false)}
+	if cfg.DeadLetter != nil {
+		out = append(out, res(*cfg.DeadLetter, true))
 	}
 	return out, nil
 }
@@ -180,33 +188,11 @@ func (Driver) Run(ctx context.Context, inst engine.Instance, ep engine.Endpoint,
 // StartMessageMoveTask; here it composes ReceiveMessage + SendMessage +
 // DeleteMessage so the server stays a standard SQS endpoint. MessageGroupId is
 // forwarded so a FIFO source keeps ordering.
-func redrive(ctx context.Context, c *http.Client, dlq string, cfg *Config) (string, error) {
-	if cfg == nil {
-		return "", fmt.Errorf("no queues declared")
+func redrive(ctx context.Context, c *http.Client, _ string, cfg *Config) (string, error) {
+	if cfg == nil || cfg.DeadLetter == nil {
+		return "", fmt.Errorf("this queue has no dead-letter queue to redrive from")
 	}
-	source := ""
-	for _, q := range cfg.Queues {
-		if q.Name == dlq {
-			continue
-		}
-		var r struct {
-			Attributes map[string]string `json:"Attributes"`
-		}
-		if err := sqsCall(ctx, c, "GetQueueAttributes",
-			map[string]any{"QueueName": q.Name, "AttributeNames": []string{"All"}}, &r); err != nil {
-			continue
-		}
-		var pol struct {
-			DeadLetterTargetArn string `json:"deadLetterTargetArn"`
-		}
-		if json.Unmarshal([]byte(r.Attributes["RedrivePolicy"]), &pol) == nil && arnTail(pol.DeadLetterTargetArn) == dlq {
-			source = q.Name
-			break
-		}
-	}
-	if source == "" {
-		return "", fmt.Errorf("no queue uses %q as its dead-letter queue", dlq)
-	}
+	dlq, source := cfg.DeadLetter.Name, cfg.Queue.Name
 
 	moved := 0
 	for moved < 100_000 { // safety cap against an unexpectedly self-refilling queue

@@ -15,11 +15,7 @@ func (Driver) Objects(inst engine.Instance) []engine.Object {
 	if !ok || cfg == nil {
 		return nil
 	}
-	objs := make([]engine.Object, 0, len(cfg.Buckets))
-	for _, b := range cfg.Buckets {
-		objs = append(objs, engine.Object{Kind: "bucket", Name: b.Name, Hash: engine.HashOf(b)})
-	}
-	return objs
+	return []engine.Object{{Kind: "bucket", Name: cfg.Bucket.Name, Hash: engine.HashOf(cfg.Bucket)}}
 }
 
 // Prune implements engine.Pruner: delete buckets no longer declared.

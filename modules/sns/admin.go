@@ -36,21 +36,17 @@ func (Driver) Actions() []engine.Action {
 	}
 }
 
-// Resources lists declared topics with a live subscription count.
+// Resources reports the topic with a live subscription count.
 func (Driver) Resources(ctx context.Context, inst engine.Instance, ep engine.Endpoint) ([]engine.Resource, error) {
 	cfg, ok := inst.Spec.(*Config)
 	if !ok || cfg == nil {
 		return nil, nil
 	}
 	client := awslocal.UnixHTTPClient(ep.Backend)
-	out := make([]engine.Resource, 0, len(cfg.Topics))
-	for _, name := range cfg.Topics {
-		subs, _ := listSubs(ctx, client, name)
-		out = append(out, engine.Resource{
-			Kind: "topic", Name: name, Status: fmt.Sprintf("%d sub(s)", len(subs)),
-		})
-	}
-	return out, nil
+	subs, _ := listSubs(ctx, client, cfg.Topic)
+	return []engine.Resource{{
+		Kind: "topic", Name: cfg.Topic, Status: fmt.Sprintf("%d sub(s)", len(subs)),
+	}}, nil
 }
 
 // publishPayload is the structured form of a publish command.

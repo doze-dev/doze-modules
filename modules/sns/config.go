@@ -10,31 +10,28 @@ import (
 	"github.com/doze-dev/doze-sdk/engine"
 )
 
-// Config is the decoded `sns "<name>" { … }` block.
+// Config is the decoded `sns "<name>" { … }` block. One block is ONE topic — the
+// block name is the topic name — with its subscriptions.
 type Config struct {
-	SQS    string // backing sqs instance name for fanout ("" if none)
-	Topics []string
-	Subs   []SubDecl
+	Topic string // the topic name = block name
+	SQS   string // backing sqs instance name for fanout ("" if none)
+	Subs  []SubDecl
 }
 
 // SubDecl is a declared subscription.
 type SubDecl struct {
-	Topic        string
 	Protocol     string
 	Endpoint     string
 	Raw          bool
 	FilterPolicy string // JSON, "" if none
 }
 
-// DecodeConfig implements engine.ConfigDecoder.
-func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string) (engine.EngineConfig, error) {
+// DecodeConfig implements engine.ConfigDecoder. The block label (name) is the
+// topic name; nested `subscribe { }` blocks are its subscriptions.
+func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, name string) (engine.EngineConfig, error) {
 	var raw struct {
-		SQS    string `hcl:"sqs,optional"`
-		Topics []struct {
-			Name string `hcl:"name,label"`
-		} `hcl:"topic,block"`
+		SQS  string `hcl:"sqs,optional"`
 		Subs []struct {
-			Topic    string              `hcl:"topic,label"`
 			Protocol string              `hcl:"protocol"`
 			Endpoint string              `hcl:"endpoint"`
 			Raw      bool                `hcl:"raw,optional"`
@@ -44,24 +41,16 @@ func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string) (engin
 	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
 		return nil, fmt.Errorf("%s", d.Error())
 	}
-
-	c := &Config{SQS: raw.SQS}
-	seen := map[string]bool{}
-	for _, t := range raw.Topics {
-		if t.Name == "" {
-			return nil, fmt.Errorf("sns topic needs a name")
-		}
-		if seen[t.Name] {
-			return nil, fmt.Errorf("sns topic %q is declared more than once", t.Name)
-		}
-		seen[t.Name] = true
-		c.Topics = append(c.Topics, t.Name)
+	if name == "" {
+		return nil, fmt.Errorf("sns topic needs a name")
 	}
+
+	c := &Config{Topic: name, SQS: raw.SQS}
 	for _, s := range raw.Subs {
 		if s.Protocol == "" || s.Endpoint == "" {
-			return nil, fmt.Errorf("sns subscribe %q needs protocol and endpoint", s.Topic)
+			return nil, fmt.Errorf("sns subscribe on %q needs protocol and endpoint", name)
 		}
-		sd := SubDecl{Topic: s.Topic, Protocol: s.Protocol, Endpoint: s.Endpoint, Raw: s.Raw}
+		sd := SubDecl{Protocol: s.Protocol, Endpoint: s.Endpoint, Raw: s.Raw}
 		if len(s.Filter) > 0 {
 			fp, _ := json.Marshal(s.Filter)
 			sd.FilterPolicy = string(fp)

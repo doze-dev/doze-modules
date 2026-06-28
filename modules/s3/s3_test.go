@@ -44,18 +44,17 @@ func TestConvergeAndObjectIO(t *testing.T) {
 	client := awslocal.UnixHTTPClient(socket)
 	waitReady(t, client, socket)
 
-	// Converge declared buckets (one with versioning, which the bolt backend
-	// can't honor — must warn, not fail).
-	inst := engine.Instance{
-		Name: "media", Type: "s3",
-		Endpoint: engine.Endpoint{Backend: socket},
-		Spec: &Config{Buckets: []Bucket{
-			{Name: "uploads"},
-			{Name: "thumbs", Versioning: true},
-		}},
-	}
-	if err := (Driver{}).Converge(context.Background(), inst, engine.Toolchain{}, inst.Endpoint); err != nil {
-		t.Fatalf("Converge: %v", err)
+	// Each s3 instance is one bucket; converge two (one with versioning, which the
+	// bolt backend can't honor — must warn, not fail).
+	for _, b := range []Bucket{{Name: "uploads"}, {Name: "thumbs", Versioning: true}} {
+		inst := engine.Instance{
+			Name: b.Name, Type: "s3",
+			Endpoint: engine.Endpoint{Backend: socket},
+			Spec:     &Config{Bucket: b},
+		}
+		if err := (Driver{}).Converge(context.Background(), inst, engine.Toolchain{}, inst.Endpoint); err != nil {
+			t.Fatalf("Converge %q: %v", b.Name, err)
+		}
 	}
 
 	// Both buckets must now exist (ListBuckets).
