@@ -144,6 +144,12 @@ func initdb(ctx context.Context, inst engine.Instance, tc engine.Toolchain, pgDa
 //   - cron.database_name: pg_cron runs its scheduler against this database, which
 //     is also where we create the extension.
 //   - listen_addresses=127.0.0.1: the extension self-connects over loopback TCP.
+//   - max_worker_processes: DocumentDB schedules pg_cron jobs that each need a
+//     background worker — build_index_concurrently runs every 2s. The default (8)
+//     is already mostly consumed by PG18's io workers, the pg_cron launcher, the
+//     documentdb bg-worker leader and the replication/autovacuum launchers, so the
+//     index-build jobs starve, fail to start, and pg_cron retries in a tight loop —
+//     pinning a CPU at idle. Raise the ceiling so the maintenance jobs get a slot.
 //
 // The fsync/durability settings mirror doze's light dev profile.
 func writeConf(pgData string) error {
@@ -151,6 +157,7 @@ func writeConf(pgData string) error {
 listen_addresses = '127.0.0.1'
 shared_preload_libraries = 'pg_cron,pg_documentdb_core,pg_documentdb'
 cron.database_name = 'postgres'
+max_worker_processes = 32
 fsync = off
 synchronous_commit = off
 full_page_writes = off
