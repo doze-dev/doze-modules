@@ -44,9 +44,18 @@ jobs:
         with: { go-version-file: go.mod }
 
       # Plugins are pure-Go cross-compiles built from this repo's own source.
+      # Each module's PUBLISHED index.yaml is downloaded first so dzm merges
+      # cumulatively — older releases stay resolvable for pinned lockfiles, and
+      # the immutability guard (same version, different bytes -> hard error)
+      # actually protects CI rebuilds.
       - name: Build modules
         run: |
           go build -o /tmp/dzm ./cmd/dzm
+          for name in $(/tmp/dzm versions | jq -r 'keys[]'); do
+            mkdir -p "dist/$name"
+            curl -sfL "https://github.com/${{ github.repository }}/releases/download/$name/index.yaml" \
+              -o "dist/$name/index.yaml" || rm -f "dist/$name/index.yaml"
+          done
           /tmp/dzm --repo "$PWD" --out dist --module "${{ inputs.module || 'all' }}"
 
       # Generate each module's meta.yaml from its driver's Describe() (single source
@@ -78,10 +87,14 @@ jobs:
       # key lives ONLY in doze-registry, so we dispatch rather than sign here.
       # REGISTRY_DISPATCH_TOKEN: a fine-grained PAT/App token with contents:write
       # on doze-registry (github.token cannot cross repositories).
+      # The payload carries the expected versions so the signer can WAIT for the
+      # release-asset CDN to serve the just-uploaded index (a dispatch fired
+      # seconds after `--clobber` can otherwise sign a stale index and no-op).
       - name: Notify registry to sign + publish
         if: steps.publish.outputs.modules != '[]'
         env: { GH_TOKEN: '${{ secrets.REGISTRY_DISPATCH_TOKEN }}' }
         run: |
           gh api repos/doze-dev/doze-registry/dispatches \
             -f event_type=modules-published \
-            -f "client_payload[modules]=${{ steps.publish.outputs.modules }}"
+            -f "client_payload[modules]=${{ steps.publish.outputs.modules }}" \
+            -f "client_payload[versions]=$(/tmp/dzm versions)"

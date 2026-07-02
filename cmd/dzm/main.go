@@ -17,6 +17,7 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -54,10 +55,24 @@ type moduleEntry struct {
 
 func main() {
 	// `dzm meta` generates each module's registry meta.yaml from its driver's
-	// Describe() (single source of truth); the default (no subcommand) builds the
-	// plugin archives.
+	// Describe() (single source of truth); `dzm versions` prints the manifest's
+	// name->version map as JSON (CI ships it in the registry dispatch payload so
+	// the signer can wait out release-asset CDN staleness); the default (no
+	// subcommand) builds the plugin archives.
 	if len(os.Args) > 1 && os.Args[1] == "meta" {
 		check(runMeta(os.Args[2:]))
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "versions" {
+		mf, err := loadModules("modules.yaml")
+		check(err)
+		versions := make(map[string]string, len(mf.Modules))
+		for name, m := range mf.Modules {
+			versions[name] = m.Version
+		}
+		b, err := json.Marshal(versions)
+		check(err)
+		fmt.Println(string(b))
 		return
 	}
 
