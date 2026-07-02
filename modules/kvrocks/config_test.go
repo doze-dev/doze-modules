@@ -20,7 +20,7 @@ func decode(t *testing.T, src string) (*Config, error) {
 	if diags.HasErrors() {
 		t.Fatalf("parse: %s", diags)
 	}
-	spec, err := Driver{}.DecodeConfig(f.Body, &hcl.EvalContext{}, ".")
+	spec, err := Driver{}.DecodeConfig(f.Body, &hcl.EvalContext{}, ".", "")
 	if err != nil {
 		return nil, err
 	}

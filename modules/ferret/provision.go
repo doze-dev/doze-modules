@@ -1,4 +1,4 @@
-package documentdb
+package ferret
 
 import (
 	"bytes"

@@ -173,11 +173,28 @@ type hclGrant struct {
 	WithGrantOption bool     `hcl:"with_grant_option,optional"`
 }
 
+// versionGatedSettings maps postgresql.conf parameters doze knows to be
+// version-gated to the engine major that introduced them. Checked at decode
+// time via engine.RequireVersion so the error names the argument and the
+// required major instead of surfacing as a server startup failure.
+var versionGatedSettings = map[string]int{
+	"io_method":     18, // asynchronous I/O, new in Postgres 18
+	"summarize_wal": 17, // WAL summarization, new in Postgres 17
+}
+
 // DecodeConfig implements engine.ConfigDecoder for the postgres block.
-func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, baseDir string) (engine.EngineConfig, error) {
+func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, baseDir string, version engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw pgBody
 	if diags := gohcl.DecodeBody(body, ctx, &raw); diags.HasErrors() {
 		return nil, fmt.Errorf("%s", diags.Error())
+	}
+
+	for key, since := range versionGatedSettings {
+		if _, ok := raw.Settings[key]; ok {
+			if err := engine.RequireVersion(version, since, fmt.Sprintf("settings[%q]", key)); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	c := &Config{

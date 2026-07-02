@@ -1,0 +1,110 @@
+# Acceptance suite: for each engine, build its REAL backend from the doze-binaries
+# recipes, then run the module's `-tags acceptance` matrix against it (via the SDK
+# enginetest harness). This is the layer that proves every config option actually
+# converges into the running backend — not just that the HCL decodes.
+#
+# It is EXPENSIVE (source builds: Postgres alone is ~10-15 min, ferret is a
+# composite), so it runs on demand + weekly rather than per-PR. Linux is the
+# priority target (the "does it work on Linux" question); add macOS runners to the
+# matrix if you want per-config macOS coverage too.
+#
+# NOTE: while doze-sdk is pre-release, doze-modules' go.mod has `replace doze-sdk =>
+# ../doze-sdk`, so doze-sdk is checked out as a sibling. Drop it once the SDK is
+# tagged and the replace becomes a version pin.
+name: acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      engine:
+        description: 'Single engine to run ("all" for every engine)'
+        required: false
+        default: all
+  schedule:
+    - cron: '0 4 * * 1' # weekly, Monday 04:00 UTC
+
+permissions:
+  contents: read
+
+jobs:
+  # Simple (single-backend) engines. Each builds one recipe into a bindir and runs
+  # its acceptance matrix. `include` carries the per-engine mapping so module name,
+  # recipe name, backend version, and the DOZE_<ENGINE>_BINDIR env all line up.
+  engine:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { module: postgres, recipe: postgres, binenv: DOZE_POSTGRES_BINDIR, verenv: DOZE_POSTGRES_VERSION, version: "18" }
+          - { module: mariadb,  recipe: mariadb,  binenv: DOZE_MARIADB_BINDIR,  verenv: DOZE_MARIADB_VERSION,  version: "11.4" }
+          - { module: valkey,   recipe: valkey,   binenv: DOZE_VALKEY_BINDIR,   verenv: "",                    version: "" }
+          - { module: kvrocks,  recipe: kvrocks,  binenv: DOZE_KVROCKS_BINDIR,  verenv: "",                    version: "" }
+          - { module: temporal, recipe: temporal, binenv: DOZE_TEMPORAL_BINDIR, verenv: DOZE_TEMPORAL_VERSION, version: "1.1" }
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.engine == null || github.event.inputs.engine == 'all' || github.event.inputs.engine == matrix.module }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: doze-modules }
+      - uses: actions/checkout@v4
+        with: { repository: doze-dev/doze-sdk, path: doze-sdk }
+      - uses: actions/checkout@v4
+        with: { repository: doze-dev/doze-binaries, path: doze-binaries }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: doze-modules/go.mod }
+
+      - name: Build ${{ matrix.recipe }} backend
+        id: build
+        working-directory: doze-binaries
+        run: |
+          triple=x86_64-unknown-linux-gnu
+          read -r version ref < <(go run ./cmd/dzb latest "${{ matrix.recipe }}")
+          chmod +x scripts/*.sh recipes/*/*.sh
+          recipes/${{ matrix.recipe }}/build.sh "$version" "$ref" "$triple" dist
+          mkdir -p extract && tar -C extract -xzf dist/*.tar.gz
+          bindir="$(dirname "$(find "$PWD/extract" -maxdepth 3 -type d -name bin | head -1)")"
+          echo "bindir=$bindir" >> "$GITHUB_OUTPUT"
+
+      - name: Run ${{ matrix.module }} acceptance
+        working-directory: doze-modules
+        env:
+          BINENV: ${{ matrix.binenv }}
+          BINDIR: ${{ steps.build.outputs.bindir }}
+          VERENV: ${{ matrix.verenv }}
+          VERSION: ${{ matrix.version }}
+        run: |
+          export "$BINENV=$BINDIR"
+          [ -n "$VERENV" ] && export "$VERENV=$VERSION"
+          go test -tags acceptance -v -timeout 20m ./modules/${{ matrix.module }}/...
+
+  # ferret is a composite: it needs BOTH the ferretdb gateway and the Postgres+
+  # DocumentDB-extension backend, so it builds two recipes into two bindirs.
+  ferret:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.engine == null || github.event.inputs.engine == 'all' || github.event.inputs.engine == 'ferret' }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: doze-modules }
+      - uses: actions/checkout@v4
+        with: { repository: doze-dev/doze-sdk, path: doze-sdk }
+      - uses: actions/checkout@v4
+        with: { repository: doze-dev/doze-binaries, path: doze-binaries }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: doze-modules/go.mod }
+      - name: Build ferretdb + documentdb backends
+        id: build
+        working-directory: doze-binaries
+        run: |
+          triple=x86_64-unknown-linux-gnu
+          chmod +x scripts/*.sh recipes/*/*.sh
+          for r in ferretdb documentdb; do
+            read -r version ref < <(go run ./cmd/dzb latest "$r")
+            recipes/$r/build.sh "$version" "$ref" "$triple" "dist-$r"
+            mkdir -p "extract-$r" && tar -C "extract-$r" -xzf "dist-$r"/*.tar.gz
+            echo "${r}_bindir=$(dirname "$(find "$PWD/extract-$r" -maxdepth 3 -type d -name bin | head -1)")" >> "$GITHUB_OUTPUT"
+          done
+      - name: Run ferret acceptance
+        working-directory: doze-modules
+        env:
+          DOZE_FERRET_BINDIR: ${{ steps.build.outputs.ferretdb_bindir }}
+          DOZE_DOCUMENTDB_BINDIR: ${{ steps.build.outputs.documentdb_bindir }}
+        run: go test -tags acceptance -v -timeout 20m ./modules/ferret/...

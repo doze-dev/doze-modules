@@ -62,7 +62,7 @@ func (c *Config) resolve(instName string) (primary QueueDecl, dlq *QueueDecl) {
 // DecodeConfig implements engine.ConfigDecoder. It decodes the queue's options;
 // the queue name is the instance name, applied at runtime via resolve. `fifo =
 // true` makes it a FIFO queue; a `dead_letter { }` block adds a companion DLQ.
-func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string) (engine.EngineConfig, error) {
+func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw struct {
 		FIFO              bool   `hcl:"fifo,optional"`
 		ContentBasedDedup bool   `hcl:"content_based_dedup,optional"`

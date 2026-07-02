@@ -1,2 +1,5 @@
 /dist/
 /.doze-src/
+
+# the dzm build tool binary (build with: go build ./cmd/dzm)
+/dzm

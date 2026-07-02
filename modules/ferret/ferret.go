@@ -1,27 +1,31 @@
-// Package documentdb implements the doze engine.Driver for DocumentDB: a
-// MongoDB-wire database that a developer connects to with any Mongo client, but
-// which is, under the hood, two cooperating processes doze starts and hides:
+// Package ferret implements the doze engine.Driver for ferret: a MongoDB-wire
+// database that a developer connects to with any Mongo client, but which is,
+// under the hood, two cooperating processes doze starts and hides:
 //
 //   - a private PostgreSQL 18 with Microsoft's DocumentDB extension chain
 //     compiled in (the `documentdb` mirror artifact), which stores the data, and
 //   - a FerretDB v2 gateway (the `ferretdb` mirror artifact) that speaks the
 //     MongoDB wire protocol and translates it to documentdb_api calls.
 //
-// The user declares only `documentdb "name" {}` and connects over MONGODB_URI;
-// Postgres and FerretDB are an implementation detail they never name or see.
-// Because one declared instance owns BOTH processes, this driver is NOT a
-// Dependent (there is no second declared instance to wire up): it provisions the
-// Postgres data dir, spawns Postgres, creates the extension, then spawns FerretDB
-// against it, and exposes a single composite Process the runtime supervises and
-// reaps as one unit. The Mongo wire needs no preamble, so clients ride the
-// generic splice path straight to FerretDB's unix socket.
-package documentdb
+// The user declares `ferret "name" { version = "2.7" … }` and connects over
+// MONGODB_URI; Postgres and the extension are an implementation detail they never
+// name or see. The user-facing `version` selects the FerretDB v2 gateway; the
+// Postgres+extension backend is pinned internally (it is validated together with
+// the gateway). Because one declared instance owns BOTH processes, this driver is
+// NOT a Dependent: it provisions the Postgres data dir, spawns Postgres, creates
+// the extension, then spawns FerretDB against it, and exposes a single composite
+// Process the runtime supervises and reaps as one unit. The Mongo wire needs no
+// preamble, so clients ride the generic splice path straight to FerretDB's unix
+// socket. Declared Mongo databases/collections are converged over that socket
+// after boot (see converge.go).
+package ferret
 
 import (
 	"context"
 	"fmt"
 	"math/rand/v2"
 	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -35,30 +39,27 @@ import (
 const (
 	bootTimeout = 60 * time.Second
 
-	// Pinned components. DocumentDB is a curated bundle, not a version the user
-	// selects: the extension chain and the gateway are validated together, so we
-	// fix both here (Postgres 18 is pinned inside the `documentdb` artifact).
-	ddbVersion    = "0.112-0" // microsoft/documentdb extension release (PG18 + chain)
-	ferretVersion = "2.7.0"   // FerretDB v2 gateway
+	// ddbVersion pins the Postgres+extension backend — an implementation detail,
+	// NOT the user-facing version. The extension chain and the gateway are
+	// validated together, so the backend is fixed here (Postgres 18 is pinned
+	// inside the `documentdb` artifact) while the user selects the FerretDB gateway
+	// version via `version = "2.x"`.
+	ddbVersion = "0.112-0" // microsoft/documentdb extension release (PG18 + chain)
 
 	// Bindir overrides for local development against freshly-built binaries.
 	envDDBBinDir    = "DOZE_DOCUMENTDB_BINDIR" // the Postgres+extension bundle
-	envFerretBinDir = "DOZE_FERRETDB_BINDIR"   // the FerretDB gateway
+	envFerretBinDir = "DOZE_FERRET_BINDIR"     // the FerretDB gateway
 
 	// mongoSocket is FerretDB's client-facing unix socket inside the instance's
 	// socket dir — the address the doze proxy splices Mongo connections to.
 	mongoSocket = "documentdb.sock"
 )
 
-// Driver is the DocumentDB composite engine driver.
+// Driver is the ferret composite engine driver.
 type Driver struct{}
 
 // Type implements engine.Driver.
-func (Driver) Type() string { return "documentdb" }
-
-// Versionless implements engine.Versionless: DocumentDB is a pinned bundle, so a
-// `documentdb` block needs no `version`.
-func (Driver) Versionless() {}
+func (Driver) Type() string { return "ferret" }
 
 // BootBudget implements engine.SlowBooter: the first cold boot downloads the
 // bundle, runs initdb, and CREATE EXTENSION documentdb CASCADE (PostGIS, pg_cron,
@@ -66,55 +67,78 @@ func (Driver) Versionless() {}
 // boots (cluster provisioned, extension already present) finish in seconds.
 func (Driver) BootBudget() time.Duration { return 3 * time.Minute }
 
-// Resolve implements engine.Driver. It resolves TWO toolchains — the Postgres+
-// extension bundle (the primary BinDir) and the FerretDB gateway (stashed under
-// Tools["ferretdb"]) — so Spawn can launch both from one Toolchain.
-func (Driver) Resolve(ctx context.Context, _ engine.VersionSpec, plat engine.Platform, lk engine.Locker, fetch engine.Fetcher) (engine.Toolchain, error) {
-	// Postgres + DocumentDB extension bundle.
+// Resolve implements engine.Driver. It resolves TWO toolchains — the internally
+// pinned Postgres+extension bundle (the primary BinDir) and the user-versioned
+// FerretDB v2 gateway (stashed under Tools["ferretdb"]) — so Plan can launch both
+// from one Toolchain. spec selects the FerretDB version; a non-2.x major is
+// rejected (only FerretDB v2 speaks to the documentdb-extension backend).
+func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.Platform, lk engine.Locker, fetch engine.Fetcher) (engine.Toolchain, error) {
+	if err := requireV2(spec); err != nil {
+		return engine.Toolchain{}, err
+	}
+	// Postgres + DocumentDB extension bundle (internal pin).
 	pgBin := os.Getenv(envDDBBinDir)
 	if pgBin == "" {
 		var err error
-		pgBin, err = ensure(ctx, lk, fetch, plat, "documentdb", ddbVersion)
+		pgBin, _, err = ensure(ctx, lk, fetch, plat, "documentdb", engine.VersionSpec(ddbVersion))
 		if err != nil {
 			return engine.Toolchain{}, err
 		}
 	}
-	// FerretDB gateway.
+	// FerretDB v2 gateway (user-selected version).
 	ferretBin := os.Getenv(envFerretBinDir)
+	full := string(spec)
 	if ferretBin == "" {
 		var err error
-		ferretBin, err = ensure(ctx, lk, fetch, plat, "ferretdb", ferretVersion)
+		ferretBin, full, err = ensure(ctx, lk, fetch, plat, "ferretdb", spec)
 		if err != nil {
 			return engine.Toolchain{}, err
 		}
 	}
 	return engine.Toolchain{
-		Engine: "documentdb",
-		Full:   ddbVersion,
+		Engine: "ferret",
+		Full:   full,
 		BinDir: pgBin,
 		Tools:  map[string]string{"ferretdb": filepath.Join(ferretBin, "ferretdb")},
 	}, nil
 }
 
-// ensure resolves+downloads one pinned component, recording its pin so the
-// lockfile freezes the exact artifacts this DocumentDB bundle was built from.
-func ensure(ctx context.Context, lk engine.Locker, fetch engine.Fetcher, plat engine.Platform, eng, full string) (string, error) {
-	spec := engine.VersionSpec(full)
+// requireV2 rejects a non-2.x FerretDB version: only FerretDB v2 speaks to the
+// documentdb-extension backend this engine bundles.
+func requireV2(spec engine.VersionSpec) error {
+	v := strings.TrimPrefix(string(spec), "v")
+	major, _, _ := strings.Cut(v, ".")
+	if major != "2" {
+		return fmt.Errorf("ferret requires FerretDB 2.x (got version %q)", string(spec))
+	}
+	return nil
+}
+
+// ensure resolves+downloads one component for spec (an exact version or a major/
+// minor to resolve against the mirror), recording its pin so the lockfile freezes
+// the exact artifacts. It returns the bin dir and the resolved full version.
+func ensure(ctx context.Context, lk engine.Locker, fetch engine.Fetcher, plat engine.Platform, eng string, spec engine.VersionSpec) (binDir, full string, err error) {
+	full = string(spec)
 	expectedSHA := ""
 	if pin, ok := lk.Get(eng, spec, plat); ok && pin.Resolved != "" {
 		full = pin.Resolved
 		expectedSHA = pin.Hashes[plat.Triple]
+	} else if strings.Count(strings.TrimPrefix(full, "v"), ".") < 2 {
+		// A major/minor (e.g. "2" or "2.7"): resolve to the newest full version.
+		if resolved, rerr := fetch.ResolveMajor(eng, string(spec)); rerr == nil {
+			full = resolved
+		}
 	}
 	binDir, digest, err := fetch.Ensure(ctx, eng, full, plat, expectedSHA)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	hashes := map[string]string{}
 	if digest != "" {
 		hashes[plat.Triple] = digest
 	}
 	lk.Record(eng, spec, plat, engine.Pin{Resolved: full, Source: "mirror", Hashes: hashes})
-	return binDir, nil
+	return binDir, full, nil
 }
 
 // Provision implements engine.Driver: initialize the private Postgres cluster
@@ -173,22 +197,57 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 			tc.Path("psql"), pgSock, port,
 		)},
 	}
+	// FERRETDB_AUTH follows the instance's `auth` toggle (default off). Enabling it
+	// is SCAFFOLD: the FerretDB v2 admin-bootstrap that must accompany auth=true
+	// (so convergeUsers can create users) still needs validation against the pinned
+	// build — until then, leave auth off.
+	authEnv := "FERRETDB_AUTH=false"
+	if cfg, ok := inst.Spec.(*Config); ok && cfg != nil && cfg.Auth {
+		authEnv = "FERRETDB_AUTH=true"
+	}
+	env := append(os.Environ(),
+		"FERRETDB_POSTGRESQL_URL="+backendURL(pgSock, port),
+		"FERRETDB_LISTEN_UNIX="+socket,
+		"FERRETDB_LISTEN_ADDR=",
+		"FERRETDB_DEBUG_ADDR=127.0.0.1:"+strconv.Itoa(debugPort),
+		"FERRETDB_STATE_DIR="+stateDir,
+		"FERRETDB_TELEMETRY=disable",
+		authEnv,
+	)
+	env = append(env, ferretSettingsEnv(inst)...)
 	ferretdb := engine.SpawnSpec{
 		Name:  "ferretdb",
 		Bin:   tc.Path("ferretdb"),
 		After: []string{"postgres"},
-		Env: append(os.Environ(),
-			"FERRETDB_POSTGRESQL_URL="+backendURL(pgSock, port),
-			"FERRETDB_LISTEN_UNIX="+socket,
-			"FERRETDB_LISTEN_ADDR=",
-			"FERRETDB_DEBUG_ADDR=127.0.0.1:"+strconv.Itoa(debugPort),
-			"FERRETDB_STATE_DIR="+stateDir,
-			"FERRETDB_TELEMETRY=disable",
-			"FERRETDB_AUTH=false",
-		),
+		Env:   env,
 		Ready: &engine.Ready{Kind: "socket", Target: socket},
 	}
 	return engine.SpawnPlan{Specs: []engine.SpawnSpec{postgres, ferretdb}}, nil
+}
+
+// lockedFerretEnv are FERRETDB_* vars doze controls; a user `settings` entry for
+// one is ignored so the socket/backend/auth model can't be broken from config.
+var lockedFerretEnv = map[string]bool{
+	"POSTGRESQL_URL": true, "LISTEN_UNIX": true, "LISTEN_ADDR": true,
+	"DEBUG_ADDR": true, "STATE_DIR": true, "AUTH": true,
+}
+
+// ferretSettingsEnv turns the instance's `settings` map into FERRETDB_<KEY> env
+// entries (key upper-cased), skipping the doze-controlled keys.
+func ferretSettingsEnv(inst engine.Instance) []string {
+	cfg, ok := inst.Spec.(*Config)
+	if !ok || cfg == nil {
+		return nil
+	}
+	var out []string
+	for k, v := range cfg.Settings {
+		key := strings.ToUpper(k)
+		if lockedFerretEnv[key] {
+			continue
+		}
+		out = append(out, "FERRETDB_"+key+"="+v)
+	}
+	return out
 }
 
 // BackendSocket implements engine.Driver: the proxy splices mongo clients to
@@ -196,10 +255,17 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 func (Driver) BackendSocket(socketDir string, _ int) string { return BackendSocketPath(socketDir) }
 
 // ConnString implements engine.Driver.
-func (Driver) ConnString(_ engine.Instance, ep engine.Endpoint) (string, string) {
+func (Driver) ConnString(inst engine.Instance, ep engine.Endpoint) (string, string) {
 	host := ep.TCPAddr
 	if host == "" {
 		host = "localhost"
+	}
+	// With auth on and a user declared, surface a credentialed URI pointed at that
+	// user's auth database (SCAFFOLD — see Config.Auth).
+	if cfg, ok := inst.Spec.(*Config); ok && cfg != nil && cfg.Auth && len(cfg.Users) > 0 {
+		u := cfg.Users[0]
+		return "MONGODB_URI", fmt.Sprintf("mongodb://%s:%s@%s/%s",
+			url.QueryEscape(u.Name), url.QueryEscape(u.Password), host, u.Database)
 	}
 	return "MONGODB_URI", "mongodb://" + host + "/"
 }

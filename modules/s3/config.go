@@ -18,7 +18,7 @@ type Config struct {
 
 // DecodeConfig implements engine.ConfigDecoder. It decodes the bucket's options;
 // the bucket name is the instance name.
-func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string) (engine.EngineConfig, error) {
+func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw struct {
 		Versioning bool `hcl:"versioning,optional"`
 	}

@@ -3,6 +3,12 @@
 # published to its own rolling release (tag = module name), serving an index.yaml
 # + per-platform archives that doze fetches from:
 #   <repo>/releases/download/<module>/index.yaml
+#
+# Publishing is GATED on `go test` (the `test` job below) so a broken module can't
+# ship. NOTE: while doze-sdk is pre-release, go.mod carries `replace doze-sdk =>
+# ../doze-sdk` and `dzm` imports the driver packages (for `dzm meta`), so both jobs
+# check out doze-sdk as a sibling to resolve the replace. Once the SDK is tagged and
+# the replace becomes a version pin, drop the doze-sdk checkout + path wiring.
 name: release
 
 on:
@@ -21,31 +27,78 @@ on:
 permissions:
   contents: write
 
+defaults:
+  run:
+    working-directory: doze-modules
+
 jobs:
+  # Fast gate: unit tests must pass before anything is built or published. The full
+  # {linux, macos} matrix runs separately in test.yml on every push/PR.
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { path: doze-modules }
+      - uses: actions/checkout@v4
+        with: { repository: doze-dev/doze-sdk, path: doze-sdk }
+      - uses: actions/setup-go@v5
+        with: { go-version-file: doze-modules/go.mod }
+      - run: go test ./...
+
   build-and-publish:
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout doze-modules
         uses: actions/checkout@v4
+        with: { path: doze-modules }
+      - name: Checkout doze-sdk (resolves the pre-release replace)
+        uses: actions/checkout@v4
+        with: { repository: doze-dev/doze-sdk, path: doze-sdk }
 
       - uses: actions/setup-go@v5
-        with: { go-version: '1.26' }
+        with: { go-version-file: doze-modules/go.mod }
 
-      # Modules are pure-Go cross-compiles built from this repo's own source
-      # (importing the published doze-sdk). No doze checkout needed.
+      # Plugins are pure-Go cross-compiles built from this repo's own source. dzm
+      # also imports the driver packages (for `dzm meta`), hence the sibling SDK.
       - name: Build modules
         run: |
           go build -o /tmp/dzm ./cmd/dzm
           /tmp/dzm --repo "$PWD" --out dist --module "${{ inputs.module || 'all' }}"
 
+      # Generate each module's meta.yaml from its driver's Describe() (single source
+      # of truth) so publish ships it as a release asset alongside index.yaml.
+      # Describers are mandatory now — a failure here is a real bug, not noise.
+      - name: Generate metadata
+        run: /tmp/dzm meta --out dist --module "${{ inputs.module || 'all' }}"
+
       # Publish each module folder to its own rolling release. gh release upload
       # --clobber merges new triples into the existing release cumulatively.
       - name: Publish per-module releases
+        id: publish
         env: { GH_TOKEN: '${{ github.token }}' }
         run: |
+          built=()
           for dir in dist/*/; do
             name=$(basename "$dir")
             gh release view "$name" >/dev/null 2>&1 || \
               gh release create "$name" --title "$name module" --notes "doze $name plugin module"
             gh release upload "$name" "$dir"/* --clobber
+            built+=("$name")
           done
+          # Emit the built module names as a JSON array for the registry dispatch.
+          printf '%s\n' "${built[@]}" | jq -R . | jq -sc . > /tmp/built.json
+          echo "modules=$(cat /tmp/built.json)" >> "$GITHUB_OUTPUT"
+
+      # Tell doze-registry to sign + publish the just-built modules into the signed
+      # Cloudflare registry (the only path doze core actually trusts). The signing
+      # key lives ONLY in doze-registry, so we dispatch rather than sign here.
+      # REGISTRY_DISPATCH_TOKEN: a fine-grained PAT/App token with contents:write
+      # on doze-registry (github.token cannot cross repositories).
+      - name: Notify registry to sign + publish
+        if: steps.publish.outputs.modules != '[]'
+        env: { GH_TOKEN: '${{ secrets.REGISTRY_DISPATCH_TOKEN }}' }
+        run: |
+          gh api repos/doze-dev/doze-registry/dispatches \
+            -f event_type=modules-published \
+            -f "client_payload[modules]=${{ steps.publish.outputs.modules }}"

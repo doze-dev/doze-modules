@@ -27,6 +27,10 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/doze-dev/doze-sdk/engine"
+	"github.com/doze-dev/doze-sdk/modindex"
+	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
 // allTriples are the supported platforms: Apple Silicon mac + 64-bit Linux. Intel
@@ -48,24 +52,20 @@ type moduleEntry struct {
 	Version string `yaml:"version"`
 }
 
-// index mirrors doze's internal/binaries.Manifest so doze parses it unchanged.
-type index struct {
-	Engines map[string]engineIndex `yaml:"engines"`
-}
-type engineIndex struct {
-	Versions  map[string]string              `yaml:"versions"`
-	Artifacts map[string]map[string]artifact `yaml:"artifacts"`
-}
-type artifact struct {
-	URL    string `yaml:"url"`
-	SHA256 string `yaml:"sha256"`
-}
-
 func main() {
+	// `dzm meta` generates each module's registry meta.yaml from its driver's
+	// Describe() (single source of truth); the default (no subcommand) builds the
+	// plugin archives.
+	if len(os.Args) > 1 && os.Args[1] == "meta" {
+		check(runMeta(os.Args[2:]))
+		return
+	}
+
 	repo := flag.String("repo", ".", "module source root (this doze-modules repo)")
 	out := flag.String("out", "dist", "output directory (release layout)")
 	only := flag.String("module", "all", "module name to build, or \"all\"")
 	triplesCSV := flag.String("triples", "", "comma-separated triples (default: all)")
+	namespace := flag.String("namespace", "doze", "publisher namespace stamped into each index")
 	flag.Parse()
 
 	mf, err := loadModules("modules.yaml")
@@ -84,16 +84,21 @@ func main() {
 	}
 
 	for _, name := range names {
+		// The driver's Describe() is mandatory: it is where the index's engine
+		// -support list comes from, so an undescribed module cannot be published.
+		if _, ok := describers[name]; !ok {
+			check(fmt.Errorf("module %q has no describer (add Describe() to its driver and register it in cmd/dzm/meta.go)", name))
+		}
 		m := mf.Modules[name]
 		fmt.Printf("== %s %s ==\n", name, m.Version)
 		for _, triple := range triples {
-			check(buildOne(*repo, *out, name, m, triple))
+			check(buildOne(*repo, *out, *namespace, name, m, triple))
 		}
 	}
 	fmt.Println("done.")
 }
 
-func buildOne(repo, out, name string, m moduleEntry, triple string) error {
+func buildOne(repo, out, namespace, name string, m moduleEntry, triple string) error {
 	plat, ok := allTriples[triple]
 	if !ok {
 		return fmt.Errorf("unknown triple %q", triple)
@@ -127,7 +132,7 @@ func buildOne(repo, out, name string, m moduleEntry, triple string) error {
 	if err != nil {
 		return err
 	}
-	return mergeIndex(filepath.Join(moduleDir, "index.yaml"), name, m.Version, triple, archiveName, sha)
+	return mergeIndex(filepath.Join(moduleDir, "index.yaml"), namespace, name, m.Version, triple, archiveName, sha)
 }
 
 // writeTarGz tars the single member (relative to root) into dest.tar.gz and
@@ -167,30 +172,58 @@ func writeTarGz(dest, root, member string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// mergeIndex updates the per-module index.yaml in place, adding (version, triple)
-// without removing existing entries.
-func mergeIndex(path, name, version, triple, archiveName, sha string) error {
-	idx := index{Engines: map[string]engineIndex{}}
+// mergeIndex updates the per-module schema-1 index.yaml in place: it adds this
+// (release, triple) artifact, stamps the release's plugin protocol and engine
+// -support list (from the driver's Describe()), and points channels.stable at
+// the highest release. Existing releases are preserved (publishing is
+// cumulative); a pre-schema index is discarded and rebuilt — a one-time event.
+// The index is written UNSIGNED; the registry's publish step signs it.
+func mergeIndex(path, namespace, name, version, triple, archiveName, sha string) error {
+	var idx *modindex.Index
 	if b, err := os.ReadFile(path); err == nil {
-		_ = yaml.Unmarshal(b, &idx)
+		if parsed, perr := modindex.Parse(b); perr == nil {
+			idx = parsed
+		} else {
+			fmt.Printf("  note: discarding pre-schema index at %s (%v)\n", path, perr)
+		}
 	}
-	if idx.Engines == nil {
-		idx.Engines = map[string]engineIndex{}
+	if idx == nil {
+		idx = &modindex.Index{Schema: modindex.Schema, Module: name, Namespace: namespace, Releases: map[string]modindex.Release{}, Channels: map[string]string{}}
 	}
-	ei := idx.Engines[name]
-	if ei.Versions == nil {
-		ei.Versions = map[string]string{}
+	if idx.Releases == nil {
+		idx.Releases = map[string]modindex.Release{}
 	}
-	if ei.Artifacts == nil {
-		ei.Artifacts = map[string]map[string]artifact{}
+	if idx.Channels == nil {
+		idx.Channels = map[string]string{}
 	}
-	ei.Versions["default"] = version
-	ei.Versions[majorOf(version)] = version
-	if ei.Artifacts[version] == nil {
-		ei.Artifacts[version] = map[string]artifact{}
+
+	rel, exists := idx.Releases[version]
+	// A published (release, triple) artifact is immutable: rebuilding the same
+	// version with different bytes silently swaps binaries under a semver — force
+	// a version bump instead.
+	if exists {
+		if prev, ok := rel.Artifacts[triple]; ok && !strings.EqualFold(prev.SHA256, sha) {
+			return fmt.Errorf("%s %s (%s) is already published with a different sha256 — bump the version in modules.yaml instead of rebuilding it", name, version, triple)
+		}
 	}
-	ei.Artifacts[version][triple] = artifact{URL: archiveName, SHA256: sha}
-	idx.Engines[name] = ei
+	rel.Protocol = dozeplugin.ProtocolVersion
+	rel.Engines = engineMajors(describers[name].Describe())
+	if rel.Artifacts == nil {
+		rel.Artifacts = map[string]modindex.Artifact{}
+	}
+	rel.Artifacts[triple] = modindex.Artifact{URL: archiveName, SHA256: sha}
+	idx.Releases[version] = rel
+
+	// stable tracks the newest release; older doze versions that can't speak a
+	// newer release's protocol fall back via modindex.Select, not via channels.
+	stable := version
+	for v := range idx.Releases {
+		if modindex.CompareVersions(v, stable) > 0 {
+			stable = v
+		}
+	}
+	idx.Channels["stable"] = stable
+	idx.Signature = "" // never carry a stale signature past a mutation
 
 	b, err := yaml.Marshal(idx)
 	if err != nil {
@@ -199,11 +232,20 @@ func mergeIndex(path, name, version, triple, archiveName, sha string) error {
 	return os.WriteFile(path, b, 0o644)
 }
 
-func majorOf(v string) string {
-	if i := strings.IndexByte(v, '.'); i > 0 {
-		return v[:i]
+// engineMajors reduces Describe().Versions to unique engine majors for the
+// index's engine-support gate. Versionless engines (no Versions) return nil —
+// no gate.
+func engineMajors(d engine.Description) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, v := range d.Versions {
+		m := modindex.Major(v)
+		if m != "" && !seen[m] {
+			seen[m] = true
+			out = append(out, m)
+		}
 	}
-	return v
+	return out
 }
 
 func loadModules(path string) (*modulesFile, error) {

@@ -36,7 +36,7 @@ func testBody(t *testing.T, src string) hcl.Body {
 
 func parsePG(t *testing.T, src string) *Config {
 	t.Helper()
-	spec, err := Driver{}.DecodeConfig(testBody(t, src), &hcl.EvalContext{}, ".")
+	spec, err := Driver{}.DecodeConfig(testBody(t, src), &hcl.EvalContext{}, ".", "")
 	if err != nil {
 		t.Fatalf("decode error: %v", err)
 	}
@@ -46,7 +46,7 @@ func parsePG(t *testing.T, src string) *Config {
 // decodePGErr decodes and returns the error (for validation-failure cases).
 func decodePGErr(t *testing.T, src string) error {
 	t.Helper()
-	_, err := Driver{}.DecodeConfig(testBody(t, src), &hcl.EvalContext{}, ".")
+	_, err := Driver{}.DecodeConfig(testBody(t, src), &hcl.EvalContext{}, ".", "")
 	return err
 }
 
@@ -292,4 +292,32 @@ postgres "app" {
 
 func engineInstance(name string, spec *Config) engine.Instance {
 	return engine.Instance{Name: name, Type: "postgres", Spec: spec}
+}
+
+// Version-gated settings fail at decode time with the argument and required
+// major named, and pass on a supporting version (or when no version is known).
+func TestPostgresVersionGatedSettings(t *testing.T) {
+	src := `
+postgres "app" {
+  settings = {
+    io_method = "worker"
+  }
+}`
+	body := testBody(t, src)
+
+	if _, err := (Driver{}).DecodeConfig(body, &hcl.EvalContext{}, ".", "16"); err == nil ||
+		!strings.Contains(err.Error(), "io_method") || !strings.Contains(err.Error(), ">= 18") {
+		t.Fatalf("io_method on 16 must fail naming the gate, got: %v", err)
+	}
+	if _, err := (Driver{}).DecodeConfig(body, &hcl.EvalContext{}, ".", "18"); err != nil {
+		t.Fatalf("io_method on 18 must pass: %v", err)
+	}
+	// An exact spec gates by its major.
+	if _, err := (Driver{}).DecodeConfig(body, &hcl.EvalContext{}, ".", "17.2"); err == nil {
+		t.Fatal("io_method on 17.2 must fail")
+	}
+	// No declared version (versionless call paths) passes — gated elsewhere.
+	if _, err := (Driver{}).DecodeConfig(body, &hcl.EvalContext{}, ".", ""); err != nil {
+		t.Fatalf("empty version must not gate: %v", err)
+	}
 }

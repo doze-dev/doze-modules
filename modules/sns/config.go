@@ -28,7 +28,7 @@ type SubDecl struct {
 
 // DecodeConfig implements engine.ConfigDecoder. The topic name is the instance
 // name; nested `subscribe { }` blocks are its subscriptions.
-func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string) (engine.EngineConfig, error) {
+func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw struct {
 		SQS  string `hcl:"sqs,optional"`
 		Subs []struct {

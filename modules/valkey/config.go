@@ -38,7 +38,7 @@ type vkBody struct {
 
 // DecodeConfig implements engine.ConfigDecoder for the valkey block. It also
 // rejects unknown keys (gohcl is strict), so typos surface as config errors.
-func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string) (engine.EngineConfig, error) {
+func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw vkBody
 	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
 		return nil, fmt.Errorf("%s", d.Error())

@@ -41,7 +41,7 @@ type kvNamespace struct {
 }
 
 // DecodeConfig implements engine.ConfigDecoder for the kvrocks block.
-func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string) (engine.EngineConfig, error) {
+func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw kvBody
 	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
 		return nil, fmt.Errorf("%s", d.Error())
