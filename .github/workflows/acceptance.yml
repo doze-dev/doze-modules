@@ -8,9 +8,6 @@
 # priority target (the "does it work on Linux" question); add macOS runners to the
 # matrix if you want per-config macOS coverage too.
 #
-# NOTE: while doze-sdk is pre-release, doze-modules' go.mod has `replace doze-sdk =>
-# ../doze-sdk`, so doze-sdk is checked out as a sibling. Drop it once the SDK is
-# tagged and the replace becomes a version pin.
 name: acceptance
 
 on:
@@ -50,8 +47,6 @@ jobs:
       - uses: actions/checkout@v4
         with: { path: doze-modules }
       - uses: actions/checkout@v4
-        with: { repository: doze-dev/doze-sdk, path: doze-sdk }
-      - uses: actions/checkout@v4
         with: { repository: doze-dev/doze-binaries, path: doze-binaries }
       - uses: actions/setup-go@v5
         with: { go-version-file: doze-modules/go.mod }
@@ -90,8 +85,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { path: doze-modules }
-      - uses: actions/checkout@v4
-        with: { repository: doze-dev/doze-sdk, path: doze-sdk }
       - uses: actions/checkout@v4
         with: { repository: doze-dev/doze-binaries, path: doze-binaries }
       - uses: actions/setup-go@v5

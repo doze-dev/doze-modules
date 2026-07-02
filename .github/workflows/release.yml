@@ -5,10 +5,7 @@
 #   <repo>/releases/download/<module>/index.yaml
 #
 # Publishing is GATED on `go test` (the `test` job below) so a broken module can't
-# ship. NOTE: while doze-sdk is pre-release, go.mod carries `replace doze-sdk =>
-# ../doze-sdk` and `dzm` imports the driver packages (for `dzm meta`), so both jobs
-# check out doze-sdk as a sibling to resolve the replace. Once the SDK is tagged and
-# the replace becomes a version pin, drop the doze-sdk checkout + path wiring.
+# ship. doze-sdk is a normal tagged dependency — plain single checkouts.
 name: release
 
 on:
@@ -27,10 +24,6 @@ on:
 permissions:
   contents: write
 
-defaults:
-  run:
-    working-directory: doze-modules
-
 jobs:
   # Fast gate: unit tests must pass before anything is built or published. The full
   # {linux, macos} matrix runs separately in test.yml on every push/PR.
@@ -38,29 +31,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with: { path: doze-modules }
-      - uses: actions/checkout@v4
-        with: { repository: doze-dev/doze-sdk, path: doze-sdk }
       - uses: actions/setup-go@v5
-        with: { go-version-file: doze-modules/go.mod }
+        with: { go-version-file: go.mod }
       - run: go test ./...
 
   build-and-publish:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout doze-modules
-        uses: actions/checkout@v4
-        with: { path: doze-modules }
-      - name: Checkout doze-sdk (resolves the pre-release replace)
-        uses: actions/checkout@v4
-        with: { repository: doze-dev/doze-sdk, path: doze-sdk }
-
+      - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
-        with: { go-version-file: doze-modules/go.mod }
+        with: { go-version-file: go.mod }
 
-      # Plugins are pure-Go cross-compiles built from this repo's own source. dzm
-      # also imports the driver packages (for `dzm meta`), hence the sibling SDK.
+      # Plugins are pure-Go cross-compiles built from this repo's own source.
       - name: Build modules
         run: |
           go build -o /tmp/dzm ./cmd/dzm

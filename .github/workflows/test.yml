@@ -1,12 +1,6 @@
-# Build + unit-test the engine modules on every PR and push. Modules previously
-# shipped with NO test gate; this runs `go test ./...` (config decode, the AWS
-# in-process server tests, the dzm meta drift guard, …) on Linux and macOS.
-#
-# NOTE: while doze-sdk is pre-release, go.mod carries `replace doze-sdk =>
-# ../doze-sdk` (the module Describe() code and the adapter fix depend on unreleased
-# SDK types). CI therefore checks out doze-sdk as a sibling so the replace resolves.
-# Once the SDK is tagged and the replace is swapped for a version pin, drop the
-# doze-sdk checkout and the `path:`/working-directory wiring.
+# Build + unit-test the engine modules on every PR and push: config decode, the
+# AWS in-process server tests, the dzm meta drift guard, … on Linux and macOS.
+# doze-sdk is a normal tagged dependency now — plain single checkout.
 name: test
 
 on:
@@ -17,10 +11,6 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: doze-modules
-
 jobs:
   test:
     strategy:
@@ -30,15 +20,9 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: doze-modules
-      - uses: actions/checkout@v4
-        with:
-          repository: doze-dev/doze-sdk
-          path: doze-sdk # resolves the `replace ../doze-sdk` in go.mod
       - uses: actions/setup-go@v5
         with:
-          go-version-file: doze-modules/go.mod
+          go-version-file: go.mod
       - name: Vet
         run: go vet ./...
       - name: Test

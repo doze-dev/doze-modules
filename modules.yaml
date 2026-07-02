@@ -18,15 +18,16 @@
 # NOTE: `process` is NOT a module — it is the supervision primitive compiled into
 # doze core, so it never appears here.
 
-# All modules bumped together for the first schema-1 index release (signed
-# per-release protocol + engine-support metadata; see doze-sdk/modindex).
+# Patch bump across the board: doze-sdk moved from a local replace to the
+# tagged v0.3.0, which changes -trimpath build inputs — published (version,
+# triple) artifacts are immutable, so new bytes mean new versions.
 modules:
-  valkey:     { path: ./modules/valkey/plugin,     version: "0.2.0" }
-  kvrocks:    { path: ./modules/kvrocks/plugin,    version: "0.2.0" }
-  postgres:   { path: ./modules/postgres/plugin,   version: "0.2.0" }
-  ferret:     { path: ./modules/ferret/plugin,     version: "0.2.0" }
-  mariadb:    { path: ./modules/mariadb/plugin,    version: "0.2.0" }
-  temporal:   { path: ./modules/temporal/plugin,   version: "0.2.0" }
-  s3:         { path: ./modules/s3/plugin,         version: "0.3.0" }
-  sqs:        { path: ./modules/sqs/plugin,        version: "0.3.0" }
-  sns:        { path: ./modules/sns/plugin,        version: "0.3.0" }
+  valkey:     { path: ./modules/valkey/plugin,     version: "0.2.1" }
+  kvrocks:    { path: ./modules/kvrocks/plugin,    version: "0.2.1" }
+  postgres:   { path: ./modules/postgres/plugin,   version: "0.2.1" }
+  ferret:     { path: ./modules/ferret/plugin,     version: "0.2.1" }
+  mariadb:    { path: ./modules/mariadb/plugin,    version: "0.2.1" }
+  temporal:   { path: ./modules/temporal/plugin,   version: "0.2.1" }
+  s3:         { path: ./modules/s3/plugin,         version: "0.3.1" }
+  sqs:        { path: ./modules/sqs/plugin,        version: "0.3.1" }
+  sns:        { path: ./modules/sns/plugin,        version: "0.3.1" }
