@@ -3,13 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 	"sort"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/doze-dev/doze-sdk/engine"
+	"github.com/doze-dev/doze-sdk/modtool"
 
 	"github.com/doze-dev/doze-modules/modules/ferret"
 	"github.com/doze-dev/doze-modules/modules/kvrocks"
@@ -41,49 +39,9 @@ var describers = map[string]engine.Describer{
 	"valkey":   valkey.Driver{},
 }
 
-// metaFile is the meta.yaml shape the registry site (prepare.mjs) consumes. It
-// intentionally has NO versions field: engine support is machine-readable in the
-// signed index (releases.<v>.engines), not docs metadata.
-type metaFile struct {
-	Title        string     `yaml:"title"`
-	Tagline      string     `yaml:"tagline"`
-	Category     string     `yaml:"category"`
-	Engine       string     `yaml:"engine"`
-	Port         int        `yaml:"port,omitempty"`
-	Example      string     `yaml:"example,omitempty"`
-	ExampleLabel string     `yaml:"exampleLabel,omitempty"`
-	Description  string     `yaml:"description,omitempty"`
-	Homepage     string     `yaml:"homepage,omitempty"`
-	Source       string     `yaml:"source,omitempty"`
-	Config       metaConfig `yaml:"config"`
-}
-
-type metaConfig struct {
-	Arguments []metaArg   `yaml:"arguments"`
-	Blocks    []metaBlock `yaml:"blocks,omitempty"`
-}
-
-type metaBlock struct {
-	Name      string    `yaml:"name"`
-	Label     string    `yaml:"label,omitempty"`
-	Desc      string    `yaml:"desc,omitempty"`
-	Arguments []metaArg `yaml:"arguments"`
-}
-
-// metaArg's field names match what the site's ArgTable reads (a.desc, a.since…).
-type metaArg struct {
-	Name     string `yaml:"name"`
-	Type     string `yaml:"type"`
-	Default  string `yaml:"default,omitempty"`
-	Desc     string `yaml:"desc,omitempty"`
-	Required bool   `yaml:"required,omitempty"`
-	Since    string `yaml:"since,omitempty"` // engine major that introduced the argument
-	Until    string `yaml:"until,omitempty"` // engine major that removed it
-}
-
-// runMeta generates meta.yaml for each module that implements engine.Describer,
-// writing it under <out>/<name>/meta.yaml (alongside the built index.yaml), so the
-// publish step ships it as a release asset and the registry copies it verbatim.
+// runMeta generates meta.yaml for each module (via the SDK's modtool, the same
+// writer third-party repos use), under <out>/<name>/meta.yaml — the publish
+// step ships it as a release asset and the registry copies it verbatim.
 func runMeta(args []string) error {
 	fs := flag.NewFlagSet("meta", flag.ExitOnError)
 	out := fs.String("out", "dist", "output directory (release layout)")
@@ -111,44 +69,11 @@ func runMeta(args []string) error {
 	}
 
 	for _, name := range names {
-		mf := toMetaFile(name, describers[name].Describe())
-		data, err := yaml.Marshal(mf)
-		if err != nil {
+		m := modtool.Module{Name: name, Version: "meta", Namespace: "doze", PluginPath: ".", Driver: describers[name]}
+		if err := modtool.WriteMeta(m, *out); err != nil {
 			return err
 		}
-		dir := filepath.Join(*out, name)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return err
-		}
-		path := filepath.Join(dir, "meta.yaml")
-		if err := os.WriteFile(path, data, 0o644); err != nil {
-			return err
-		}
-		fmt.Printf("wrote %s\n", path)
+		fmt.Printf("wrote %s\n", filepath.Join(*out, name, "meta.yaml"))
 	}
 	return nil
-}
-
-func toMetaFile(name string, d engine.Description) metaFile {
-	blocks := make([]metaBlock, 0, len(d.Blocks))
-	for _, b := range d.Blocks {
-		blocks = append(blocks, metaBlock{Name: b.Name, Label: b.Label, Desc: b.Desc, Arguments: toMetaArgs(b.Args)})
-	}
-	return metaFile{
-		Title: d.Title, Tagline: d.Tagline, Category: d.Category, Engine: name,
-		Port: d.Port, Example: d.Example, ExampleLabel: d.ExampleLabel,
-		Description: d.Description, Homepage: d.Homepage, Source: d.Source,
-		Config: metaConfig{Arguments: toMetaArgs(d.Config), Blocks: blocks},
-	}
-}
-
-func toMetaArgs(in []engine.ConfigArg) []metaArg {
-	out := make([]metaArg, 0, len(in))
-	for _, a := range in {
-		out = append(out, metaArg{
-			Name: a.Name, Type: a.Type, Default: a.Default, Desc: a.Desc,
-			Required: a.Required, Since: a.Since, Until: a.Until,
-		})
-	}
-	return out
 }
