@@ -75,7 +75,14 @@ jobs:
             name=$(basename "$dir")
             gh release view "$name" >/dev/null 2>&1 || \
               gh release create "$name" --title "$name module" --notes "doze $name plugin module"
-            gh release upload "$name" "$dir"/* --clobber
+            # GitHub's release API throws transient 5xxs; a flaky upload must not
+            # fail the whole release.
+            for attempt in 1 2 3; do
+              gh release upload "$name" "$dir"/* --clobber && break
+              [ "$attempt" = 3 ] && exit 1
+              echo "upload of $name failed (attempt $attempt), retrying in 15s…"
+              sleep 15
+            done
             built+=("$name")
           done
           # Emit the built module names as a JSON array for the registry dispatch.
