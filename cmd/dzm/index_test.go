@@ -98,3 +98,24 @@ func TestMergeIndexDiscardsPreSchema(t *testing.T) {
 		t.Fatalf("stable = %s", idx.Channels["stable"])
 	}
 }
+
+// A (version, triple) already present in the index is published and immutable —
+// buildOne must skip it rather than rebuild (VCS stamping makes rebuilds differ).
+func TestPublishedSkip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "index.yaml")
+	if err := mergeIndex(path, "doze", "valkey", "0.2.1", "aarch64-apple-darwin", "valkey-plugin-0.2.1-aarch64-apple-darwin.tar.gz", "aaa"); err != nil {
+		t.Fatal(err)
+	}
+	if !published(path, "0.2.1", "aarch64-apple-darwin") {
+		t.Fatal("existing (version, triple) must report published")
+	}
+	if published(path, "0.2.1", "x86_64-unknown-linux-gnu") {
+		t.Fatal("missing triple must not report published")
+	}
+	if published(path, "0.2.2", "aarch64-apple-darwin") {
+		t.Fatal("missing version must not report published")
+	}
+	if published(filepath.Join(t.TempDir(), "absent.yaml"), "0.2.1", "aarch64-apple-darwin") {
+		t.Fatal("absent index must not report published")
+	}
+}

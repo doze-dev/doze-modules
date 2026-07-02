@@ -125,6 +125,16 @@ func buildOne(repo, out, namespace, name string, m moduleEntry, triple string) e
 	archiveName := fmt.Sprintf("%s-plugin-%s-%s.tar.gz", name, m.Version, triple)
 	archivePath := filepath.Join(moduleDir, archiveName)
 
+	// Published artifacts are IMMUTABLE and never rebuilt (the doze-binaries
+	// model): Go stamps the VCS revision into binaries, so a rebuild from a
+	// later commit produces different bytes for identical module source — and a
+	// changed published sha strands every doze.lock that pinned it. When the
+	// (pre-downloaded) index already carries this (version, triple), keep it.
+	if published(filepath.Join(moduleDir, "index.yaml"), m.Version, triple) {
+		fmt.Printf("  skip %s (already published)\n", triple)
+		return nil
+	}
+
 	// Cross-compile the plugin (pure Go, CGO off) into a temp bin/<name>-plugin.
 	tmp, err := os.MkdirTemp("", "dzm-"+name)
 	if err != nil {
@@ -136,7 +146,9 @@ func buildOne(repo, out, namespace, name string, m moduleEntry, triple string) e
 		return err
 	}
 	fmt.Printf("  build %s\n", triple)
-	cmd := exec.Command("go", "build", "-trimpath", "-o", binPath, m.Path)
+	// -buildvcs=false: no revision stamp, so identical source builds identical
+	// bytes regardless of the commit doing the building.
+	cmd := exec.Command("go", "build", "-trimpath", "-buildvcs=false", "-o", binPath, m.Path)
 	cmd.Dir = repo
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS="+plat[0], "GOARCH="+plat[1])
 	if outb, err := cmd.CombinedOutput(); err != nil {
@@ -245,6 +257,21 @@ func mergeIndex(path, namespace, name, version, triple, archiveName, sha string)
 		return err
 	}
 	return os.WriteFile(path, b, 0o644)
+}
+
+// published reports whether the index at path already carries an artifact for
+// (version, triple) — i.e. it was released before and must not be rebuilt.
+func published(indexPath, version, triple string) bool {
+	b, err := os.ReadFile(indexPath)
+	if err != nil {
+		return false
+	}
+	idx, err := modindex.Parse(b)
+	if err != nil {
+		return false
+	}
+	_, ok := idx.Releases[version].Artifacts[triple]
+	return ok
 }
 
 // engineMajors reduces Describe().Versions to unique engine majors for the
