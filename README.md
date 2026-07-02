@@ -25,9 +25,16 @@ cmd/dzm/              # the build tool: cross-compiles plugins + assembles the r
 .github/workflows/    # release CI (single runner — plugins are pure-Go cross-compiles)
 ```
 
-A module is **not** its own repo — it's an entry in `modules.yaml`. Authoring or
-upgrading one is a PR editing that file; CI builds the four supported triples
-(`{aarch64,x86_64}-{apple-darwin,unknown-linux-gnu}`) and publishes cumulatively.
+An **official** module is not its own repo — it's an entry in `modules.yaml`.
+Authoring or upgrading one is a PR editing that file; CI builds the three
+supported triples (`aarch64-apple-darwin`, `{aarch64,x86_64}-unknown-linux-gnu`)
+and publishes cumulatively. `dzm` itself is a thin loop around the SDK's
+[`modtool`](https://github.com/doze-dev/doze-sdk/tree/main/modtool) library.
+
+Writing a **third-party** module? Start from
+[doze-dev/module-template](https://github.com/doze-dev/module-template) — a
+complete working engine with docs generated from code, drift-guarded tests, and
+release CI on the same `modtool` library this repo uses.
 
 ## Two version axes
 
