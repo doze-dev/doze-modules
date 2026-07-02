@@ -41,7 +41,11 @@ jobs:
           - { module: kvrocks,  recipe: kvrocks,  binenv: DOZE_KVROCKS_BINDIR,  verenv: "",                    version: "" }
           - { module: temporal, recipe: temporal, binenv: DOZE_TEMPORAL_BINDIR, verenv: DOZE_TEMPORAL_VERSION, version: "1.1" }
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.engine == null || github.event.inputs.engine == 'all' || github.event.inputs.engine == matrix.module }}
+    # The matrix context is NOT available in a job-level `if` (it invalidates the
+    # whole workflow file), so the per-engine dispatch filter lives on the
+    # expensive steps instead; the cheap checkout/setup steps always run.
+    env:
+      WANTED: ${{ github.event.inputs.engine || 'all' }}
     steps:
       - uses: actions/checkout@v4
         with: { path: doze-modules }
@@ -53,6 +57,7 @@ jobs:
         with: { go-version-file: doze-modules/go.mod }
 
       - name: Build ${{ matrix.recipe }} backend
+        if: ${{ env.WANTED == 'all' || env.WANTED == matrix.module }}
         id: build
         working-directory: doze-binaries
         run: |
@@ -65,6 +70,7 @@ jobs:
           echo "bindir=$bindir" >> "$GITHUB_OUTPUT"
 
       - name: Run ${{ matrix.module }} acceptance
+        if: ${{ env.WANTED == 'all' || env.WANTED == matrix.module }}
         working-directory: doze-modules
         env:
           BINENV: ${{ matrix.binenv }}
