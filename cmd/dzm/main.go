@@ -8,6 +8,7 @@
 //	dzm --repo . --out dist --triples aarch64-apple-darwin
 //	dzm meta --out dist                   # (re)generate every meta.yaml
 //	dzm versions                          # modules.yaml name->version map as JSON
+//	dzm readme                            # regenerate README.md's module table
 package main
 
 import (
@@ -41,6 +42,10 @@ func main() {
 	// subcommand) builds the plugin archives.
 	if len(os.Args) > 1 && os.Args[1] == "meta" {
 		check(runMeta(os.Args[2:]))
+		return
+	}
+	if len(os.Args) > 1 && os.Args[1] == "readme" {
+		check(runReadme(os.Args[2:]))
 		return
 	}
 	if len(os.Args) > 1 && os.Args[1] == "versions" {
