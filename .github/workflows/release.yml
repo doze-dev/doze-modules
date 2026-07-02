@@ -100,8 +100,13 @@ jobs:
       - name: Notify registry to sign + publish
         if: steps.publish.outputs.modules != '[]'
         env: { GH_TOKEN: '${{ secrets.REGISTRY_DISPATCH_TOKEN }}' }
+        # --input with a jq-built body sends modules as a real JSON array and
+        # versions as a real object. `gh api -f` sends everything as strings,
+        # which made the receiver's `jq '.[]'` silently iterate nothing — the
+        # dispatch-triggered publishes signed zero modules.
         run: |
-          gh api repos/doze-dev/doze-registry/dispatches \
-            -f event_type=modules-published \
-            -f "client_payload[modules]=${{ steps.publish.outputs.modules }}" \
-            -f "client_payload[versions]=$(/tmp/dzm versions)"
+          jq -n \
+            --argjson m '${{ steps.publish.outputs.modules }}' \
+            --argjson v "$(/tmp/dzm versions)" \
+            '{event_type: "modules-published", client_payload: {modules: $m, versions: $v}}' \
+          | gh api repos/doze-dev/doze-registry/dispatches --input -
