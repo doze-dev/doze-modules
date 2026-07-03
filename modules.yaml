@@ -24,8 +24,10 @@
 modules:
   valkey:     { path: ./modules/valkey/plugin,     version: "0.2.1" }
   kvrocks:    { path: ./modules/kvrocks/plugin,    version: "0.2.1" }
-  postgres:   { path: ./modules/postgres/plugin,   version: "0.2.1" }
-  ferret:     { path: ./modules/ferret/plugin,     version: "0.2.1" }
+  # 0.2.2: readiness probe passes -U postgres, so backend logs stop collecting
+  # a `FATAL: role "<os-user>" does not exist` on every boot/health poll.
+  postgres:   { path: ./modules/postgres/plugin,   version: "0.2.2" }
+  ferret:     { path: ./modules/ferret/plugin,     version: "0.2.2" }
   mariadb:    { path: ./modules/mariadb/plugin,    version: "0.2.1" }
   temporal:   { path: ./modules/temporal/plugin,   version: "0.2.1" }
   s3:         { path: ./modules/s3/plugin,         version: "0.3.1" }

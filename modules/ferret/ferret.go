@@ -185,8 +185,10 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 		Bin:  tc.Path("postgres"),
 		Args: []string{"-D", pgData, "-k", pgSock, "-p", strconv.Itoa(port)},
 		Ready: &engine.Ready{
-			Kind:   "exec",
-			Target: fmt.Sprintf("%s -h %s -p %d -d postgres", tc.Path("pg_isready"), pgSock, port),
+			Kind: "exec",
+			// -U postgres: otherwise every probe's startup packet names the OS
+			// user and litters the backend log with `FATAL: role "…" does not exist`.
+			Target: fmt.Sprintf("%s -h %s -p %d -d postgres -U postgres", tc.Path("pg_isready"), pgSock, port),
 		},
 		// Install the DocumentDB extension chain once Postgres is ready, before
 		// FerretDB connects. The extension's pg_cron maintenance jobs run fine now

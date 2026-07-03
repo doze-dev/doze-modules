@@ -115,8 +115,12 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 			"-c", "listen_addresses=", // unix socket only
 		},
 		Ready: &engine.Ready{
-			Kind:    "exec",
-			Target:  fmt.Sprintf("%s -h %s -p %d -d postgres", tc.Path("pg_isready"), inst.SocketDir, inst.Port),
+			Kind: "exec",
+			// -U postgres: without it pg_isready's startup packet names the OS
+			// user, and every probe leaves a scary (but harmless) `FATAL: role
+			// "<user>" does not exist` in the backend log. The postgres superuser
+			// always exists (provisioning creates it; local socket is trust).
+			Target:  fmt.Sprintf("%s -h %s -p %d -d postgres -U postgres", tc.Path("pg_isready"), inst.SocketDir, inst.Port),
 			Timeout: bootTimeout,
 		},
 	}
