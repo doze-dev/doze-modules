@@ -49,9 +49,10 @@ func (Driver) Describe() engine.Description {
     owner = "app"
   }
 
-  extension "pgvector" {}
+  extension "pg_trgm" {}
 
-  grant "app" {
+  grant {
+    role       = "app"
     privileges = ["ALL"]
     schema     = "analytics"
     objects    = "tables"

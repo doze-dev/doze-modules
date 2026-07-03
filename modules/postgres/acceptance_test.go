@@ -36,7 +36,7 @@ func pgVersion() string {
 // postgres superuser (local trust), returning the trimmed result.
 func psql(t *testing.T, b *enginetest.Backend, db, sql string) string {
 	t.Helper()
-	bin := filepath.Join(os.Getenv("DOZE_POSTGRES_BINDIR"), "bin", "psql")
+	bin := filepath.Join(os.Getenv("DOZE_POSTGRES_BINDIR"), "psql")
 	cmd := exec.Command(bin,
 		"-h", b.SocketDir(), "-p", itoa(b.Port()), "-U", "postgres", "-d", db,
 		"-tAqc", sql)
@@ -125,4 +125,27 @@ func TestAcceptance(t *testing.T) {
 			t.Fatalf("role 'temp' not pruned; count = %q", got)
 		}
 	})
+}
+
+// TestExampleConverges boots and converges the module's own Describe().Example —
+// the config every user sees first (module docs, `doze modules docs postgres`,
+// the registry page). Docs are executable here, not prose: an example that
+// doesn't decode or converge fails the release gate.
+func TestExampleConverges(t *testing.T) {
+	b := enginetest.BootExample(t, Driver{}, pgVersion())
+	db := b.Instance().Name // the example's block label is the database name
+	if got := psql(t, b, db, "SELECT current_database()"); got != db {
+		t.Fatalf("example database = %q, want %q", got, db)
+	}
+	for _, role := range []string{"app", "readers"} {
+		if got := psql(t, b, db, "SELECT count(*) FROM pg_roles WHERE rolname = '"+role+"'"); got != "1" {
+			t.Fatalf("example role %q missing after converge", role)
+		}
+	}
+	if got := psql(t, b, db, "SELECT count(*) FROM pg_namespace WHERE nspname = 'analytics'"); got != "1" {
+		t.Fatal("example schema \"analytics\" missing after converge")
+	}
+	if got := psql(t, b, db, "SELECT count(*) FROM pg_extension WHERE extname = 'pg_trgm'"); got != "1" {
+		t.Fatal("example extension pg_trgm missing after converge")
+	}
 }

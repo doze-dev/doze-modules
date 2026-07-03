@@ -20,7 +20,7 @@ import (
 // valkeyCli runs valkey-cli against the booted server's unix socket.
 func valkeyCli(t *testing.T, b *enginetest.Backend, args ...string) string {
 	t.Helper()
-	bin := filepath.Join(os.Getenv("DOZE_VALKEY_BINDIR"), "bin", "valkey-cli")
+	bin := filepath.Join(os.Getenv("DOZE_VALKEY_BINDIR"), "valkey-cli")
 	full := append([]string{"-s", socketPath(b.SocketDir())}, args...)
 	out, err := exec.Command(bin, full...).CombinedOutput()
 	if err != nil {

@@ -61,7 +61,9 @@ jobs:
           chmod +x scripts/*.sh recipes/*/*.sh
           recipes/${{ matrix.recipe }}/build.sh "$version" "$ref" "$triple" dist
           mkdir -p extract && tar -C extract -xzf dist/*.tar.gz
-          bindir="$(dirname "$(find "$PWD/extract" -maxdepth 3 -type d -name bin | head -1)")"
+          # BINDIR contract (matches every driver's DOZE_<ENGINE>_BINDIR override):
+          # the directory that CONTAINS the executables, i.e. .../bin itself.
+          bindir="$(find "$PWD/extract" -maxdepth 3 -type d -name bin | head -1)"
           echo "bindir=$bindir" >> "$GITHUB_OUTPUT"
 
       - name: Run ${{ matrix.module }} acceptance
@@ -99,7 +101,7 @@ jobs:
             read -r version ref < <(go run ./cmd/dzb latest "$r")
             recipes/$r/build.sh "$version" "$ref" "$triple" "dist-$r"
             mkdir -p "extract-$r" && tar -C "extract-$r" -xzf "dist-$r"/*.tar.gz
-            echo "${r}_bindir=$(dirname "$(find "$PWD/extract-$r" -maxdepth 3 -type d -name bin | head -1)")" >> "$GITHUB_OUTPUT"
+            echo "${r}_bindir=$(find "$PWD/extract-$r" -maxdepth 3 -type d -name bin | head -1)" >> "$GITHUB_OUTPUT"
           done
       - name: Run ferret acceptance
         working-directory: doze-modules

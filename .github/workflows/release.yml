@@ -35,8 +35,108 @@ jobs:
         with: { go-version-file: go.mod }
       - run: go test ./...
 
+  # Which modules does this event release? A version bump in modules.yaml is the
+  # release intent, and NO VERSION PUBLISHES WITHOUT ITS ACCEPTANCE SUITE — the
+  # layer that boots a real backend and proves the configs (including each
+  # module's own published Example) actually converge. A dispatch gates the
+  # named module, or every module on "all".
+  bumped:
+    runs-on: ubuntu-latest
+    outputs:
+      modules: ${{ steps.diff.outputs.modules }}
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - id: diff
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -z "${{ inputs.module }}" ] || [ "${{ inputs.module }}" = "all" ]; then
+              yq -o=json -I=0 '.modules | keys' modules.yaml > /tmp/mods.json
+            else
+              echo '["${{ inputs.module }}"]' > /tmp/mods.json
+            fi
+          else
+            git show HEAD^:modules.yaml > /tmp/prev.yaml 2>/dev/null || echo 'modules: {}' > /tmp/prev.yaml
+            : > /tmp/list
+            for m in $(yq '.modules | keys | .[]' modules.yaml); do
+              cur=$(yq ".modules.$m.version" modules.yaml)
+              prev=$(yq ".modules.$m.version" /tmp/prev.yaml)
+              [ "$cur" != "$prev" ] && echo "$m" >> /tmp/list || true
+            done
+            jq -R . </tmp/list | jq -sc . > /tmp/mods.json
+          fi
+          echo "modules=$(cat /tmp/mods.json)" | tee -a "$GITHUB_OUTPUT"
+
+  # Acceptance for every module being released, against the SAME prebuilt
+  # doze-binaries backends users resolve — not a fresh source build, the exact
+  # published bytes. A module whose backend isn't published in doze-binaries
+  # fails here by design: a module users can't boot must not release. The
+  # built-in engines (s3/sqs/sns) need no backend; their tagged tests just run.
+  acceptance:
+    needs: bumped
+    if: ${{ needs.bumped.outputs.modules != '[]' && needs.bumped.outputs.modules != '' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        module: ${{ fromJSON(needs.bumped.outputs.modules) }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version-file: go.mod }
+      - name: Fetch prebuilt backend(s)
+        run: |
+          triple=x86_64-unknown-linux-gnu
+          fetch() { # <recipe> [major] -> prints the bin dir (the BINDIR contract)
+            local recipe=$1 major=${2:-} idx="/tmp/$1-index.yaml" full url
+            if ! curl -sfL "https://github.com/doze-dev/doze-binaries/releases/download/$recipe/index.yaml" -o "$idx"; then
+              echo "::error::no prebuilt $recipe backend in doze-binaries — users cannot boot this module; publish the backend before releasing" >&2
+              return 1
+            fi
+            if [ -n "$major" ]; then
+              full=$(yq ".engines.$recipe.versions.\"$major\"" "$idx")
+            else
+              full=$(yq ".engines.$recipe.versions | to_entries | .[-1].value" "$idx")
+            fi
+            url=$(yq ".engines.$recipe.artifacts.\"$full\".\"$triple\".url" "$idx")
+            [ "$url" != "null" ] || { echo "::error::no $triple artifact for $recipe $full" >&2; return 1; }
+            mkdir -p "/tmp/x-$recipe"
+            curl -sfL "$url" | tar -xz -C "/tmp/x-$recipe"
+            find "/tmp/x-$recipe" -maxdepth 3 -type d -name bin | head -1
+          }
+          case "${{ matrix.module }}" in
+            postgres)
+              dir=$(fetch postgres 16)
+              { echo "DOZE_POSTGRES_BINDIR=$dir"; echo "DOZE_POSTGRES_VERSION=16"; } >> "$GITHUB_ENV" ;;
+            valkey)
+              dir=$(fetch valkey)
+              echo "DOZE_VALKEY_BINDIR=$dir" >> "$GITHUB_ENV" ;;
+            kvrocks)
+              dir=$(fetch kvrocks)
+              echo "DOZE_KVROCKS_BINDIR=$dir" >> "$GITHUB_ENV" ;;
+            ferret)
+              fdir=$(fetch ferretdb); ddir=$(fetch documentdb)
+              { echo "DOZE_FERRET_BINDIR=$fdir"; echo "DOZE_DOCUMENTDB_BINDIR=$ddir"; } >> "$GITHUB_ENV" ;;
+            mariadb)
+              dir=$(fetch mariadb 11.4)
+              { echo "DOZE_MARIADB_BINDIR=$dir"; echo "DOZE_MARIADB_VERSION=11.4"; } >> "$GITHUB_ENV" ;;
+            temporal)
+              dir=$(fetch temporal 1.1)
+              { echo "DOZE_TEMPORAL_BINDIR=$dir"; echo "DOZE_TEMPORAL_VERSION=1.1"; } >> "$GITHUB_ENV" ;;
+            s3|sqs|sns)
+              echo "built-in engine: no backend to fetch" ;;
+            *)
+              echo "::error::module '${{ matrix.module }}' has no backend mapping in release.yml — add one" >&2
+              exit 1 ;;
+          esac
+      - name: Run acceptance
+        run: go test -tags acceptance -v -timeout 20m ./modules/${{ matrix.module }}/...
+
   build-and-publish:
-    needs: test
+    needs: [test, bumped, acceptance]
+    # acceptance is skipped when nothing was bumped (a tooling/workflow-only
+    # push rebuilds reproducibly and re-publishes nothing new) — that's a pass.
+    if: ${{ !cancelled() && needs.test.result == 'success' && (needs.acceptance.result == 'success' || needs.acceptance.result == 'skipped') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -28,7 +28,7 @@ func mariaVersion() string {
 // mariaQ runs a scalar query against the booted backend over its socket as root.
 func mariaQ(t *testing.T, b *enginetest.Backend, sql string) string {
 	t.Helper()
-	bin := filepath.Join(os.Getenv("DOZE_MARIADB_BINDIR"), "bin", "mariadb")
+	bin := filepath.Join(os.Getenv("DOZE_MARIADB_BINDIR"), "mariadb")
 	out, err := exec.Command(bin, "--no-defaults",
 		"--socket="+backendSocketPath(b.SocketDir()), "--user=root",
 		"--batch", "--skip-column-names", "-e", sql).CombinedOutput()

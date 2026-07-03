@@ -41,8 +41,8 @@ github.com/cevatbarisyilmaz/ara v0.0.4/go.mod h1:BfFOxnUd6Mj6xmcvRxHN3Sr21Z1T3U2
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/doze-dev/doze-sdk v0.4.0 h1:/DdhnRkhI9NZsj3U9vI5TX9QcHozlwIitVWrpA+yB0U=
-github.com/doze-dev/doze-sdk v0.4.0/go.mod h1:6QyR7o4Xe90fLxYfUzpfT4x/Wtg6LtDnNfuihsEdtfw=
+github.com/doze-dev/doze-sdk v0.5.0 h1:FAkBY0Fhm+vL+ViPXLPxA0fOUOdf2qNXRIR3G2VHzTA=
+github.com/doze-dev/doze-sdk v0.5.0/go.mod h1:6QyR7o4Xe90fLxYfUzpfT4x/Wtg6LtDnNfuihsEdtfw=
 github.com/fatih/color v1.13.0 h1:8LOYc1KYPPmyKMuN8QV2DNRWNbLo6LZ0iLs8+mlH53w=
 github.com/fatih/color v1.13.0/go.mod h1:kLAiJbzzSOZDVNGyDpeOxJ47H46qBXwg5ILebYFFOfk=
 github.com/go-logr/logr v1.4.3 h1:CjnDlHq8ikf6E492q6eKboGOC0T8CDaOvkHCIg8idEI=

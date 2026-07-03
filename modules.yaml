@@ -24,9 +24,12 @@
 modules:
   valkey:     { path: ./modules/valkey/plugin,     version: "0.2.1" }
   kvrocks:    { path: ./modules/kvrocks/plugin,    version: "0.2.1" }
+  # postgres 0.2.3: role convergence is two-pass (create all, then memberships)
+  # so declaration order can't break member_of; the published Example is fixed
+  # (grant takes no label) and is now converged by acceptance before release.
   # 0.2.2: readiness probe passes -U postgres, so backend logs stop collecting
   # a `FATAL: role "<os-user>" does not exist` on every boot/health poll.
-  postgres:   { path: ./modules/postgres/plugin,   version: "0.2.2" }
+  postgres:   { path: ./modules/postgres/plugin,   version: "0.2.3" }
   ferret:     { path: ./modules/ferret/plugin,     version: "0.2.2" }
   mariadb:    { path: ./modules/mariadb/plugin,    version: "0.2.1" }
   temporal:   { path: ./modules/temporal/plugin,   version: "0.2.1" }

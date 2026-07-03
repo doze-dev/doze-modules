@@ -32,9 +32,19 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, tc engine.Tool
 	dbName := inst.Name
 
 	// 1. Roles (before the database, so an owner role exists when we create it).
+	// Two passes: create/alter every role first, then grant memberships — so a
+	// member may be declared before its group role. Declaration order must not
+	// matter in a declarative config.
 	for _, role := range cfg.Roles {
 		if err := convergeRole(ctx, psql, role); err != nil {
 			return fmt.Errorf("role %q: %w", role.Name, err)
+		}
+	}
+	for _, role := range cfg.Roles {
+		for _, parent := range role.MemberOf {
+			if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("GRANT %s TO %s", sqlIdent(parent), sqlIdent(role.Name))); err != nil {
+				return fmt.Errorf("role %q: granting membership in %q: %w", role.Name, parent, err)
+			}
 		}
 	}
 
@@ -153,11 +163,8 @@ func convergeRole(ctx context.Context, psql *psqlRunner, role Role) error {
 			return err
 		}
 	}
-	for _, parent := range role.MemberOf {
-		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("GRANT %s TO %s", sqlIdent(parent), sqlIdent(role.Name))); err != nil {
-			return fmt.Errorf("granting membership in %q: %w", parent, err)
-		}
-	}
+	// (Memberships are granted by Converge in a second pass, after every
+	// declared role exists — declaration order must not matter.)
 	// Per-role parameters: ALTER ROLE … SET key = value (search_path, timeouts, …).
 	for _, k := range sortedKeys(role.Config) {
 		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("ALTER ROLE %s SET %s = %s", sqlIdent(role.Name), sqlIdent(k), sqlLit(role.Config[k]))); err != nil {

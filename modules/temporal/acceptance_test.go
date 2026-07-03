@@ -50,7 +50,7 @@ func TestAcceptance(t *testing.T) {
 	})
 
 	addr := fmt.Sprintf("127.0.0.1:%d", port)
-	bin := filepath.Join(os.Getenv("DOZE_TEMPORAL_BINDIR"), "bin", "temporal")
+	bin := filepath.Join(os.Getenv("DOZE_TEMPORAL_BINDIR"), "temporal")
 
 	var out []byte
 	var err error
