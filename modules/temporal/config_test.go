@@ -95,3 +95,15 @@ func TestCapabilities(t *testing.T) {
 		t.Error("temporal should NOT be Versionless (it is versioned on the CLI)")
 	}
 }
+
+// Temporal's engine major is two-part ("1.1"): it must resolve through the
+// mirror's versions map, not be taken as an exact artifact version — that
+// exact confusion shipped 0.2.1 unable to resolve any toolchain.
+func TestVersionClassification(t *testing.T) {
+	if isExactFull("1.1") {
+		t.Fatal(`"1.1" is temporal's MAJOR, not a full release`)
+	}
+	if !isExactFull("1.1.0") {
+		t.Fatal(`"1.1.0" names a full release`)
+	}
+}

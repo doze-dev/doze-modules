@@ -32,7 +32,10 @@ modules:
   postgres:   { path: ./modules/postgres/plugin,   version: "0.2.3" }
   ferret:     { path: ./modules/ferret/plugin,     version: "0.2.2" }
   mariadb:    { path: ./modules/mariadb/plugin,    version: "0.2.1" }
-  temporal:   { path: ./modules/temporal/plugin,   version: "0.2.1" }
+  # temporal 0.2.2: a declared "1.1" resolves via the mirror's major map — the
+  # any-dot-is-exact rule made 0.2.1 look up a "1.1" artifact and 404 on every
+  # toolchain resolve (the module was unbootable since release).
+  temporal:   { path: ./modules/temporal/plugin,   version: "0.2.2" }
   s3:         { path: ./modules/s3/plugin,         version: "0.3.1" }
   sqs:        { path: ./modules/sqs/plugin,        version: "0.3.1" }
   sns:        { path: ./modules/sns/plugin,        version: "0.3.1" }
