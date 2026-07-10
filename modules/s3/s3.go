@@ -1,13 +1,11 @@
 // Package s3 implements the doze engine.Driver for a local, S3-compatible object
-// store. The server is built into doze (internal/s3srv, embedding gofakes3) and
+// store. The server is doze-aws's from-scratch pure-Go implementation, and
 // run via the shared awslocal.BaseDriver self-exec path; this driver adds the
 // config schema (buckets) and a Converger that creates declared buckets.
 package s3
 
 import (
 	"github.com/doze-dev/doze-modules/awslocal"
-
-	_ "github.com/doze-dev/doze-modules/modules/s3/s3srv" // register the s3 service factory
 )
 
 // New returns the configured s3 driver (BaseDriver populated).

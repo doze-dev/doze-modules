@@ -12,12 +12,11 @@ import (
 	"time"
 
 	"github.com/doze-dev/doze-modules/awslocal"
-	"github.com/doze-dev/doze-modules/modules/s3/s3srv"
 	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // TestConvergeAndObjectIO proves the S3 integration end to end over a unix
-// socket: the gofakes3-backed server serves, the Converger creates the declared
+// socket: the doze-aws server serves, the Converger creates the declared
 // buckets, and object put/get works against a converged bucket.
 func TestConvergeAndObjectIO(t *testing.T) {
 	dir := t.TempDir()
@@ -27,9 +26,9 @@ func TestConvergeAndObjectIO(t *testing.T) {
 	}
 	socket := filepath.Join(dir, "s3.sock")
 
-	handler, closer, err := s3srv.New(data)
+	handler, closer, err := serveFactory(data)
 	if err != nil {
-		t.Fatalf("s3srv.New: %v", err)
+		t.Fatalf("serveFactory: %v", err)
 	}
 	defer closer.Close()
 

@@ -9,7 +9,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sns v1.40.1
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.44.0
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/johannesboyne/gofakes3 v0.0.0-20260208201424-4c385a1f6a73
 	go.etcd.io/bbolt v1.5.0
 	go.mongodb.org/mongo-driver v1.17.9
 	gopkg.in/yaml.v3 v3.0.1
