@@ -39,3 +39,12 @@ modules:
   s3:         { path: ./modules/s3/plugin,         version: "0.3.1" }
   sqs:        { path: ./modules/sqs/plugin,        version: "0.3.1" }
   sns:        { path: ./modules/sns/plugin,        version: "0.3.1" }
+  # JVM-free single-node Kafka-protocol broker (embeds doze-kafka):
+  kafka:          { path: ./modules/kafka/plugin,          version: "0.1.0" }
+  # New AWS modules backed by doze-aws (pure-Go, no gofakes3/LocalStack):
+  dynamodb:       { path: ./modules/dynamodb/plugin,       version: "0.1.0" }
+  secretsmanager: { path: ./modules/secretsmanager/plugin, version: "0.1.0" }
+  ssm:            { path: ./modules/ssm/plugin,            version: "0.1.0" }
+  kms:            { path: ./modules/kms/plugin,            version: "0.1.0" }
+  eventbridge:    { path: ./modules/eventbridge/plugin,    version: "0.1.0" }
+  lambda:         { path: ./modules/lambda/plugin,         version: "0.1.0" }
