@@ -1,5 +1,5 @@
 // Package sqs implements the doze engine.Driver for a local, SQS-compatible
-// queue service. The server is built into doze (internal/sqssrv, pure Go) and
+// queue service. The server is the pure-Go implementation from doze-aws, and
 // run via the shared awslocal.BaseDriver self-exec path; this driver adds the
 // config schema (queues + redrive) and a Converger that creates declared queues.
 package sqs
@@ -9,8 +9,6 @@ import (
 
 	"github.com/doze-dev/doze-modules/awslocal"
 	"github.com/doze-dev/doze-sdk/engine"
-
-	_ "github.com/doze-dev/doze-modules/modules/sqs/sqssrv" // register the sqs service factory
 )
 
 // New returns the configured sqs driver (BaseDriver populated).
