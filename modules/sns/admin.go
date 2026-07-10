@@ -11,8 +11,8 @@ import (
 	"sort"
 	"strings"
 
+	awssns "github.com/doze-dev/doze-aws/sns"
 	"github.com/doze-dev/doze-modules/awslocal"
-	"github.com/doze-dev/doze-modules/modules/sns/snssrv"
 	"github.com/doze-dev/doze-sdk/engine"
 )
 
@@ -130,7 +130,7 @@ func publishReport(ctx context.Context, c *http.Client, topic string, p publishP
 	var b strings.Builder
 	matched := 0
 	for _, s := range subs {
-		ok := snssrv.MatchPolicy(s.FilterPolicy, p.Attributes)
+		ok := awssns.MatchPolicy(s.FilterPolicy, p.Attributes)
 		mark := "✗"
 		if ok {
 			mark = "✓"
@@ -162,7 +162,7 @@ func routingJSON(ctx context.Context, c *http.Client, topic string, p publishPay
 		items = append(items, map[string]any{
 			"protocol": s.Protocol, "endpoint": shortEndpoint(s.Endpoint),
 			"filter": prettyFilter(s.FilterPolicy), "raw": s.Raw, "confirmed": !s.Pending,
-			"matched": snssrv.MatchPolicy(s.FilterPolicy, p.Attributes),
+			"matched": awssns.MatchPolicy(s.FilterPolicy, p.Attributes),
 		})
 	}
 	b, _ := json.Marshal(items)

@@ -1,5 +1,5 @@
 // Package sns implements the doze engine.Driver for a local, SNS-compatible
-// pub/sub service. The server is built into doze (internal/snssrv, pure Go) and
+// pub/sub service. The server is doze-aws's pure-Go implementation, and
 // run via the shared awslocal.BaseDriver self-exec path. This driver adds the
 // config schema (topics + subscriptions), a Converger that creates them, and the
 // fanout wiring: when the block names a backing `sqs` instance, SNS depends on
@@ -10,8 +10,6 @@ package sns
 import (
 	"github.com/doze-dev/doze-modules/awslocal"
 	"github.com/doze-dev/doze-sdk/engine"
-
-	_ "github.com/doze-dev/doze-modules/modules/sns/snssrv" // register the sns service factory
 )
 
 // New returns the configured sns driver (BaseDriver populated, incl. childEnv).
