@@ -10,7 +10,6 @@ func (Driver) Describe() engine.Description {
 		Category:     "config",
 		Description:  "A local Secrets Manager backed by doze-aws — version stages (AWSCURRENT/AWSPREVIOUS), staging labels, and recovery-window deletes. One block is one secret: declare its value and doze creates (and keeps) it. SecureString values are encrypted at rest per data dir.",
 		Port:         0,
-		Versions:     []string{"builtin"},
 		Source:       "doze/secretsmanager",
 		Homepage:     "https://github.com/doze-dev/doze-modules/tree/main/modules/secretsmanager",
 		ExampleLabel: "db_password",

@@ -10,7 +10,6 @@ func (Driver) Describe() engine.Description {
 		Category:     "compute",
 		Description:  "A local Lambda backed by doze-aws — functions run as real supervised local processes speaking the AWS Lambda Runtime API (no Docker). One block is one function: point it at a local code dir and doze creates it on boot, wiring AWS_ENDPOINT_URL_* so the handler reaches sibling services. Invoke via the SDK/CLI or an event source.",
 		Port:         0,
-		Versions:     []string{"builtin"},
 		Source:       "doze/lambda",
 		Homepage:     "https://github.com/doze-dev/doze-modules/tree/main/modules/lambda",
 		ExampleLabel: "processor",

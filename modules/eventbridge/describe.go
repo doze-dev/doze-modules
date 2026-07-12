@@ -10,7 +10,6 @@ func (Driver) Describe() engine.Description {
 		Category:     "queue",
 		Description:  "A local EventBridge backed by doze-aws — the full content-based event pattern language and rules that deliver to SQS and Lambda targets. One block is one event bus: declare rules with patterns and targets (referencing sibling sqs/lambda instances) and doze creates them on boot.",
 		Port:         0,
-		Versions:     []string{"builtin"},
 		Source:       "doze/eventbridge",
 		Homepage:     "https://github.com/doze-dev/doze-modules/tree/main/modules/eventbridge",
 		ExampleLabel: "app",

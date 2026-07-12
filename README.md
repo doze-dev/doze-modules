@@ -23,13 +23,20 @@ model: doze core is a thin host, every engine is a separately-versioned module.
 | Module | Category | Engine versions | |
 |---|---|---|---|
 | [`aws-console`](https://doze.nerdmenot.in/registry/doze/aws-console) | observability | built-in | A local web console for your doze AWS services. |
+| [`dynamodb`](https://doze.nerdmenot.in/registry/doze/dynamodb) | database | built-in | Local DynamoDB-compatible key-value/document store. |
+| [`eventbridge`](https://doze.nerdmenot.in/registry/doze/eventbridge) | queue | built-in | Local AWS EventBridge event bus + rules. |
 | [`ferret`](https://doze.nerdmenot.in/registry/doze/ferret) | database | 2 | MongoDB-compatible database (FerretDB v2 over Postgres) |
+| [`kafka`](https://doze.nerdmenot.in/registry/doze/kafka) | queue | 1 · 2 · 3 · 4 | Single-node Kafka-protocol broker, no JVM. |
+| [`kms`](https://doze.nerdmenot.in/registry/doze/kms) | security | built-in | Local AWS KMS with real local crypto. |
 | [`kvrocks`](https://doze.nerdmenot.in/registry/doze/kvrocks) | database | 2 | Redis API on RocksDB — durable, low-RAM. |
+| [`lambda`](https://doze.nerdmenot.in/registry/doze/lambda) | compute | built-in | Local AWS Lambda — real processes, no Docker. |
 | [`mariadb`](https://doze.nerdmenot.in/registry/doze/mariadb) | database | 11 | MySQL-compatible relational database |
 | [`postgres`](https://doze.nerdmenot.in/registry/doze/postgres) | database | 14 · 15 · 16 · 17 · 18 | Real local Postgres, declared not scripted. |
 | [`s3`](https://doze.nerdmenot.in/registry/doze/s3) | storage | built-in | Local S3 buckets, no LocalStack. |
+| [`secretsmanager`](https://doze.nerdmenot.in/registry/doze/secretsmanager) | config | built-in | Local AWS Secrets Manager for app secrets. |
 | [`sns`](https://doze.nerdmenot.in/registry/doze/sns) | queue | built-in | Local SNS topics + subscriptions. |
 | [`sqs`](https://doze.nerdmenot.in/registry/doze/sqs) | queue | built-in | Local SQS queues with DLQ + redrive. |
+| [`ssm`](https://doze.nerdmenot.in/registry/doze/ssm) | config | built-in | Local AWS SSM Parameter Store for config. |
 | [`temporal`](https://doze.nerdmenot.in/registry/doze/temporal) | workflow | 1 | Durable workflow engine (local dev server) |
 | [`valkey`](https://doze.nerdmenot.in/registry/doze/valkey) | cache | 8 · 9 | In-memory cache, Redis-compatible. |
 <!-- modules:end -->

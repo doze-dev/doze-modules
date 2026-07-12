@@ -20,8 +20,10 @@ func TestDescribersWellFormed(t *testing.T) {
 		if d.Title == "" || d.Tagline == "" || d.Category == "" {
 			t.Errorf("%s: missing Title/Tagline/Category: %+v", name, d)
 		}
-		if len(d.Config) == 0 {
-			t.Errorf("%s: Describe().Config is empty", name)
+		// A module must document its config schema — either as top-level args
+		// (Config) or nested blocks (Blocks), e.g. ssm's `parameter` blocks.
+		if len(d.Config) == 0 && len(d.Blocks) == 0 {
+			t.Errorf("%s: Describe() documents no config (neither Config nor Blocks)", name)
 		}
 		if !strings.Contains(d.Example, name+" \"") {
 			t.Errorf("%s: Example should contain a %s block, got:\n%s", name, name, d.Example)

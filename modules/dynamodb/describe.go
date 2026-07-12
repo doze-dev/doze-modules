@@ -10,7 +10,6 @@ func (Driver) Describe() engine.Description {
 		Category:     "database",
 		Description:  "A local, disk-backed DynamoDB — the full expression engine (condition/filter/update/projection), GSIs and LSIs, transactions, and TTL. Backed by doze-aws; unmodified AWS SDK v1/v2 clients work. One block is one table: declare its keys, attributes, indexes, and TTL and doze creates it on boot.",
 		Port:         0,
-		Versions:     []string{"builtin"},
 		Source:       "doze/dynamodb",
 		Homepage:     "https://github.com/doze-dev/doze-modules/tree/main/modules/dynamodb",
 		ExampleLabel: "orders",
