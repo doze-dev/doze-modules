@@ -9,11 +9,12 @@ func (Driver) Describe() engine.Description {
 		Tagline:      "Local AWS KMS with real local crypto.",
 		Category:     "security",
 		Description:  "A local KMS backed by doze-aws — symmetric (AES-GCM), asymmetric (RSA/ECC sign+encrypt), and HMAC keys, with REAL local crypto so encrypt/decrypt/sign/verify round-trip. One block is one key with the alias alias/<name>, created on boot.",
-		Port:         0,
+		Port:         9020,
 		Source:       "doze/kms",
 		Homepage:     "https://github.com/doze-dev/doze-modules/tree/main/modules/kms",
 		ExampleLabel: "app",
 		Example: `kms "app" {
+  port = 9020
   description = "App data key"
   key_spec    = "SYMMETRIC_DEFAULT"
   key_usage   = "ENCRYPT_DECRYPT"

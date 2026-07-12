@@ -9,11 +9,12 @@ func (Driver) Describe() engine.Description {
 		Tagline:      "Local AWS Secrets Manager for app secrets.",
 		Category:     "config",
 		Description:  "A local Secrets Manager backed by doze-aws — version stages (AWSCURRENT/AWSPREVIOUS), staging labels, and recovery-window deletes. One block is one secret: declare its value and doze creates (and keeps) it. SecureString values are encrypted at rest per data dir.",
-		Port:         0,
+		Port:         9040,
 		Source:       "doze/secretsmanager",
 		Homepage:     "https://github.com/doze-dev/doze-modules/tree/main/modules/secretsmanager",
 		ExampleLabel: "db_password",
 		Example: `secretsmanager "db_password" {
+  port = 9040
   secret_string = "s3cr3t"
   description   = "Primary database password"
 }`,
