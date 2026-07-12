@@ -17,7 +17,10 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{
 		Name:        "lambda",
 		EndpointEnv: "AWS_ENDPOINT_URL_LAMBDA",
-		ChildEnv:    awslocal.PeerSocketEnv,
+		// PeerEnv (not PeerSocketEnv): the lambda service reaches peers over the
+		// sockets, but the function processes it spawns call siblings with an AWS
+		// SDK, which needs the reachable AWS_ENDPOINT_URL_<SVC> endpoints too.
+		ChildEnv: awslocal.PeerEnv,
 	}}
 }
 

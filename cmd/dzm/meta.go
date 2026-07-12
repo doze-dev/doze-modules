@@ -9,6 +9,7 @@ import (
 	"github.com/doze-dev/doze-sdk/engine"
 	"github.com/doze-dev/doze-sdk/modtool"
 
+	awsconsole "github.com/doze-dev/doze-modules/modules/awsconsole"
 	"github.com/doze-dev/doze-modules/modules/ferret"
 	"github.com/doze-dev/doze-modules/modules/kvrocks"
 	"github.com/doze-dev/doze-modules/modules/mariadb"
@@ -28,15 +29,16 @@ import (
 // resolves. Coverage is mandatory: dzm (build) and dzm meta both fail on a
 // modules.yaml entry with no describer.
 var describers = map[string]engine.Describer{
-	"ferret":   ferret.Driver{},
-	"kvrocks":  kvrocks.Driver{},
-	"mariadb":  mariadb.Driver{},
-	"postgres": postgres.Driver{},
-	"s3":       s3.New(),
-	"sns":      sns.New(),
-	"sqs":      sqs.New(),
-	"temporal": temporal.Driver{},
-	"valkey":   valkey.Driver{},
+	"aws-console": awsconsole.New(),
+	"ferret":      ferret.Driver{},
+	"kvrocks":     kvrocks.Driver{},
+	"mariadb":     mariadb.Driver{},
+	"postgres":    postgres.Driver{},
+	"s3":          s3.New(),
+	"sns":         sns.New(),
+	"sqs":         sqs.New(),
+	"temporal":    temporal.Driver{},
+	"valkey":      valkey.Driver{},
 }
 
 // runMeta generates meta.yaml for each module (via the SDK's modtool, the same

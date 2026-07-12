@@ -48,3 +48,5 @@ modules:
   kms:            { path: ./modules/kms/plugin,            version: "0.1.0" }
   eventbridge:    { path: ./modules/eventbridge/plugin,    version: "0.1.0" }
   lambda:         { path: ./modules/lambda/plugin,         version: "0.1.0" }
+  # Web console aggregating the AWS services (depends on the ones it surfaces):
+  aws-console:    { path: ./modules/awsconsole/plugin,     version: "0.1.0" }
