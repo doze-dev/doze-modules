@@ -11,7 +11,11 @@
 // is no cycle.
 package awslocal
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+	"strings"
+)
 
 // Conventional local-AWS identity. These match the values LocalStack uses, so
 // tools and copy-pasted snippets that assume them keep working.
@@ -30,4 +34,25 @@ const (
 // ARN("sqs", "my-queue") -> arn:aws:sqs:us-east-1:000000000000:my-queue).
 func ARN(service, resource string) string {
 	return fmt.Sprintf("arn:aws:%s:%s:%s:%s", service, Region, AccountID, resource)
+}
+
+// SortedKeys returns m's keys sorted — the deterministic iteration order every
+// human-facing rendering of a map (attribute lines, form entries) wants.
+func SortedKeys[V any](m map[string]V) []string {
+	ks := make([]string, 0, len(m))
+	for k := range m {
+		ks = append(ks, k)
+	}
+	sort.Strings(ks)
+	return ks
+}
+
+// KVLine renders a string map as a compact, deterministic "k=v k=v" line —
+// the shape Admin result lines use to echo message/publish attributes.
+func KVLine(m map[string]string) string {
+	parts := make([]string, 0, len(m))
+	for _, k := range SortedKeys(m) {
+		parts = append(parts, k+"="+m[k])
+	}
+	return strings.Join(parts, " ")
 }

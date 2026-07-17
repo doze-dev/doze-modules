@@ -1,13 +1,10 @@
 package sqs
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -125,7 +122,7 @@ func (Driver) Run(ctx context.Context, inst engine.Instance, ep engine.Endpoint,
 		}
 		extra := ""
 		if len(p.Attributes) > 0 {
-			extra = "  ·  attrs " + kvLine(p.Attributes)
+			extra = "  ·  attrs " + awslocal.KVLine(p.Attributes)
 		}
 		if p.Group != "" {
 			extra += "  ·  group " + p.Group
@@ -276,12 +273,7 @@ func (m message) metaLine() string {
 	if c := m.Attributes["ApproximateReceiveCount"]; c != "" && c != "1" {
 		parts = append(parts, "received×"+c)
 	}
-	keys := make([]string, 0, len(m.MessageAttributes))
-	for k := range m.MessageAttributes {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
+	for _, k := range awslocal.SortedKeys(m.MessageAttributes) {
 		parts = append(parts, k+"="+m.MessageAttributes[k].StringValue)
 	}
 	return strings.Join(parts, "  ·  ")
@@ -296,19 +288,6 @@ func parseSend(input string) (sendPayload, error) {
 		return p, nil
 	}
 	return sendPayload{Body: input}, nil
-}
-
-func kvLine(m map[string]string) string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	parts := make([]string, 0, len(keys))
-	for _, k := range keys {
-		parts = append(parts, k+"="+m[k])
-	}
-	return strings.Join(parts, " ")
 }
 
 // arnTail returns the resource name from an ARN (the part after the last colon).
@@ -352,29 +331,8 @@ func queueInfo(a map[string]string) map[string]string {
 }
 
 // sqsCall posts a JSON-1.0 SQS request (X-Amz-Target) and, when out is non-nil,
-// decodes the JSON response into it. Mirrors the Converger's wire format.
+// decodes the JSON response into it — awslocal.JSONCallDecode with the SQS
+// target prefix applied.
 func sqsCall(ctx context.Context, c *http.Client, target string, payload map[string]any, out any) error {
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return err
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://unix/", bytes.NewReader(body))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-amz-json-1.0")
-	req.Header.Set("X-Amz-Target", "AmazonSQS."+target)
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); resp.Body.Close() }()
-	if resp.StatusCode/100 != 2 {
-		msg, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("%s: %s: %s", target, resp.Status, strings.TrimSpace(string(msg)))
-	}
-	if out != nil {
-		return json.NewDecoder(resp.Body).Decode(out)
-	}
-	return nil
+	return awslocal.JSONCallDecode(ctx, c, "1.0", "AmazonSQS."+target, payload, out)
 }

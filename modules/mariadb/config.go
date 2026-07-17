@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -62,8 +61,8 @@ type grantBlock struct {
 // DecodeConfig implements engine.ConfigDecoder for the mariadb block.
 func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw mariaBody
-	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
-		return nil, fmt.Errorf("%s", d.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 	cfg := &Config{
 		CharacterSet: raw.CharacterSet,

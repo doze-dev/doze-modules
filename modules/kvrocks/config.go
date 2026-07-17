@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -43,8 +42,8 @@ type kvNamespace struct {
 // DecodeConfig implements engine.ConfigDecoder for the kvrocks block.
 func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw kvBody
-	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
-		return nil, fmt.Errorf("%s", d.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 	c := &Config{Password: raw.Password, Workers: raw.Workers, Settings: raw.Settings}
 	seen := map[string]bool{}

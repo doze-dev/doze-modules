@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-modules/awslocal"
 	"github.com/doze-dev/doze-sdk/engine"
@@ -76,8 +75,8 @@ func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engi
 			Retention       string `hcl:"retention,optional"`
 		} `hcl:"dead_letter,block"`
 	}
-	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
-		return nil, fmt.Errorf("%s", d.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 
 	attrs := map[string]string{}

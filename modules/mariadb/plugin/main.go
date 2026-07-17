@@ -4,13 +4,8 @@
 package main
 
 import (
-	"encoding/gob"
-
 	"github.com/doze-dev/doze-modules/modules/mariadb"
 	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
-func main() {
-	gob.Register(&mariadb.Config{})
-	dozeplugin.Serve(mariadb.Driver{})
-}
+func main() { dozeplugin.Main(mariadb.Driver{}, &mariadb.Config{}) }

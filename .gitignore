@@ -3,3 +3,4 @@
 
 # the dzm build tool binary (build with: go build ./cmd/dzm)
 /dzm
+/plugin

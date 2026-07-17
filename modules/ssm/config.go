@@ -1,10 +1,7 @@
 package ssm
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -30,8 +27,8 @@ func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engi
 			Type  string `hcl:"type,optional"`
 		} `hcl:"parameter,block"`
 	}
-	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
-		return nil, fmt.Errorf("%s", d.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 	c := &Config{}
 	for _, p := range raw.Params {

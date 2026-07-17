@@ -1,11 +1,8 @@
 package sqs
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/doze-dev/doze-modules/awslocal"
@@ -35,24 +32,8 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolc
 }
 
 func createQueue(ctx context.Context, c *http.Client, q QueueDecl) error {
-	payload, _ := json.Marshal(map[string]any{
+	return sqsCall(ctx, c, "CreateQueue", map[string]any{
 		"QueueName":  q.Name,
 		"Attributes": q.Attrs,
-	})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://unix/", bytes.NewReader(payload))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-amz-json-1.0")
-	req.Header.Set("X-Amz-Target", "AmazonSQS.CreateQueue")
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
-	if resp.StatusCode/100 != 2 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("CreateQueue returned %s: %s", resp.Status, body)
-	}
-	return nil
+	}, nil)
 }

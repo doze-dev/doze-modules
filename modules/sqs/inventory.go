@@ -1,11 +1,8 @@
 package sqs
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/doze-dev/doze-modules/awslocal"
@@ -44,21 +41,5 @@ func (Driver) Prune(ctx context.Context, _ engine.Instance, _ engine.Toolchain, 
 
 func deleteQueue(ctx context.Context, c *http.Client, name string) error {
 	// The local server's DeleteQueue accepts a bare QueueName (no URL needed).
-	payload, _ := json.Marshal(map[string]any{"QueueName": name})
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://unix/", bytes.NewReader(payload))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-amz-json-1.0")
-	req.Header.Set("X-Amz-Target", "AmazonSQS.DeleteQueue")
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
-	if resp.StatusCode/100 != 2 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("DeleteQueue returned %s: %s", resp.Status, body)
-	}
-	return nil
+	return sqsCall(ctx, c, "DeleteQueue", map[string]any{"QueueName": name}, nil)
 }

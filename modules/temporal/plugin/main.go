@@ -4,13 +4,8 @@
 package main
 
 import (
-	"encoding/gob"
-
 	"github.com/doze-dev/doze-modules/modules/temporal"
 	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
-func main() {
-	gob.Register(&temporal.Config{})
-	dozeplugin.Serve(temporal.Driver{})
-}
+func main() { dozeplugin.Main(temporal.Driver{}, &temporal.Config{}) }

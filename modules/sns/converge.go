@@ -3,7 +3,6 @@ package sns
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -64,20 +63,9 @@ func subscriptionEndpoint(sub SubDecl) string {
 	return sub.Endpoint
 }
 
+// snsPost is snsExec for write-only calls: it posts the Query-protocol request
+// and keeps only the error.
 func snsPost(ctx context.Context, c *http.Client, form url.Values) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://unix/", strings.NewReader(form.Encode()))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := c.Do(req)
-	if err != nil {
-		return err
-	}
-	defer func() { _, _ = io.Copy(io.Discard, resp.Body); _ = resp.Body.Close() }()
-	if resp.StatusCode/100 != 2 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("%s returned %s: %s", form.Get("Action"), resp.Status, body)
-	}
-	return nil
+	_, err := awslocal.QueryCall(ctx, c, form)
+	return err
 }

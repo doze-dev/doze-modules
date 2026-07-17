@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -185,8 +184,8 @@ var versionGatedSettings = map[string]int{
 // DecodeConfig implements engine.ConfigDecoder for the postgres block.
 func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, baseDir string, version engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw pgBody
-	if diags := gohcl.DecodeBody(body, ctx, &raw); diags.HasErrors() {
-		return nil, fmt.Errorf("%s", diags.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 
 	for key, since := range versionGatedSettings {

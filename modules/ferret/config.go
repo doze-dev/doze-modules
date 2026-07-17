@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -95,8 +94,8 @@ type indexBlock struct {
 // the config file's directory, used to resolve relative seed paths.
 func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, baseDir string, _ engine.VersionSpec) (engine.EngineConfig, error) {
 	var raw ferretBody
-	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
-		return nil, fmt.Errorf("%s", d.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 	cfg := &Config{BaseDir: baseDir, Settings: raw.Settings, Auth: raw.Auth}
 	for _, u := range raw.Users {

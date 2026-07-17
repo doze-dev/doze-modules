@@ -4,13 +4,8 @@
 package main
 
 import (
-	"encoding/gob"
-
 	"github.com/doze-dev/doze-modules/modules/ferret"
 	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
-func main() {
-	gob.Register(&ferret.Config{})
-	dozeplugin.Serve(ferret.Driver{})
-}
+func main() { dozeplugin.Main(ferret.Driver{}, &ferret.Config{}) }

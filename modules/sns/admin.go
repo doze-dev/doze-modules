@@ -5,10 +5,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 
 	awssns "github.com/doze-dev/doze-aws/sns"
@@ -73,7 +71,7 @@ func (Driver) Run(ctx context.Context, _ engine.Instance, ep engine.Endpoint, ac
 			form.Set("Subject", p.Subject)
 		}
 		i := 1
-		for _, k := range sortedKeys(p.Attributes) {
+		for _, k := range awslocal.SortedKeys(p.Attributes) {
 			form.Set(fmt.Sprintf("MessageAttributes.entry.%d.Name", i), k)
 			form.Set(fmt.Sprintf("MessageAttributes.entry.%d.Value.DataType", i), "String")
 			form.Set(fmt.Sprintf("MessageAttributes.entry.%d.Value.StringValue", i), p.Attributes[k])
@@ -144,7 +142,7 @@ func publishReport(ctx context.Context, c *http.Client, topic string, p publishP
 	}
 	head := fmt.Sprintf("published to %s — routed to %d of %d subscription(s)", topic, matched, len(subs))
 	if len(p.Attributes) > 0 {
-		head += "  ·  attrs " + kvLine(p.Attributes)
+		head += "  ·  attrs " + awslocal.KVLine(p.Attributes)
 	}
 	return head + "\n" + strings.TrimRight(b.String(), "\n")
 }
@@ -274,7 +272,7 @@ func prettyFilter(policyJSON string) string {
 		return policyJSON
 	}
 	var parts []string
-	for _, key := range sortedRawKeys(policy) {
+	for _, key := range awslocal.SortedKeys(policy) {
 		var vals []string
 		for _, c := range policy[key] {
 			var s string
@@ -308,47 +306,8 @@ func onOff(b bool) string {
 	return "off"
 }
 
-func kvLine(m map[string]string) string {
-	var parts []string
-	for _, k := range sortedKeys(m) {
-		parts = append(parts, k+"="+m[k])
-	}
-	return strings.Join(parts, " ")
-}
-
-func sortedKeys(m map[string]string) []string {
-	ks := make([]string, 0, len(m))
-	for k := range m {
-		ks = append(ks, k)
-	}
-	sort.Strings(ks)
-	return ks
-}
-
-func sortedRawKeys(m map[string][]json.RawMessage) []string {
-	ks := make([]string, 0, len(m))
-	for k := range m {
-		ks = append(ks, k)
-	}
-	sort.Strings(ks)
-	return ks
-}
-
-// snsExec posts a Query-protocol SNS request and returns the raw XML response.
+// snsExec posts a Query-protocol SNS request and returns the raw XML response —
+// awslocal.QueryCall over the topic's backend socket.
 func snsExec(ctx context.Context, c *http.Client, form url.Values) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://unix/", strings.NewReader(form.Encode()))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := c.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	body, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode/100 != 2 {
-		return nil, fmt.Errorf("%s: %s: %s", form.Get("Action"), resp.Status, strings.TrimSpace(string(body)))
-	}
-	return body, nil
+	return awslocal.QueryCall(ctx, c, form)
 }

@@ -1,10 +1,7 @@
 package s3
 
 import (
-	"fmt"
-
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -22,8 +19,8 @@ func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engi
 	var raw struct {
 		Versioning bool `hcl:"versioning,optional"`
 	}
-	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
-		return nil, fmt.Errorf("%s", d.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 	return &Config{Versioning: raw.Versioning}, nil
 }

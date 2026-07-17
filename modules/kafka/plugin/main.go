@@ -6,7 +6,6 @@
 package main
 
 import (
-	"encoding/gob"
 	"fmt"
 	"os"
 
@@ -22,6 +21,5 @@ func main() {
 		}
 		return
 	}
-	gob.Register(&kafka.Config{})
-	dozeplugin.Serve(kafka.New())
+	dozeplugin.Main(kafka.New(), &kafka.Config{})
 }

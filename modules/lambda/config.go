@@ -1,11 +1,9 @@
 package lambda
 
 import (
-	"fmt"
 	"path/filepath"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -30,8 +28,8 @@ func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, baseDir string, 
 		Timeout int               `hcl:"timeout,optional"`
 		Env     map[string]string `hcl:"env,optional"`
 	}
-	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
-		return nil, fmt.Errorf("%s", d.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 	dir := raw.Dir
 	if !filepath.IsAbs(dir) {

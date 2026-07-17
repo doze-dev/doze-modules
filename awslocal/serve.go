@@ -14,6 +14,9 @@ import (
 	"sort"
 	"syscall"
 	"time"
+
+	"github.com/doze-dev/doze-sdk/engine"
+	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
 // ServerFactory builds a service's HTTP handler over its data directory. The
@@ -88,6 +91,25 @@ func Serve(name, socket, datadir string) error {
 		_ = closer.Close()
 	}
 	return nil
+}
+
+// PluginMain is the whole main() of a local-AWS engine plugin. The binary is
+// dual-purpose: invoked plainly it speaks the plugin protocol (via
+// plugin.Main, which gob-registers config and serves drv); invoked as
+// `<plugin> __serve <service> …` (what BaseDriver.Plan spawns — the plugin
+// self-execs os.Executable()) it runs the service itself via ServeFromArgs.
+// A module's plugin/main.go collapses to a one-liner:
+//
+//	func main() { awslocal.PluginMain(sqs.New(), &sqs.Config{}) }
+func PluginMain(drv engine.Driver, config any) {
+	if len(os.Args) > 1 && os.Args[1] == "__serve" {
+		if err := ServeFromArgs(os.Args); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
+	dozeplugin.Main(drv, config)
 }
 
 // ServeFromArgs runs the `__serve` subcommand straight from a plugin's os.Args

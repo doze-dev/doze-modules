@@ -4,13 +4,8 @@
 package main
 
 import (
-	"encoding/gob"
-
 	"github.com/doze-dev/doze-modules/modules/postgres"
 	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
-func main() {
-	gob.Register(&postgres.Config{})
-	dozeplugin.Serve(postgres.Driver{})
-}
+func main() { dozeplugin.Main(postgres.Driver{}, &postgres.Config{}) }

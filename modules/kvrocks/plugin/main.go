@@ -4,13 +4,8 @@
 package main
 
 import (
-	"encoding/gob"
-
 	"github.com/doze-dev/doze-modules/modules/kvrocks"
 	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
-func main() {
-	gob.Register(&kvrocks.Config{})
-	dozeplugin.Serve(kvrocks.Driver{})
-}
+func main() { dozeplugin.Main(kvrocks.Driver{}, &kvrocks.Config{}) }

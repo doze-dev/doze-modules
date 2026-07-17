@@ -4,14 +4,8 @@
 package main
 
 import (
-	"encoding/gob"
-
 	"github.com/doze-dev/doze-modules/modules/valkey"
 	dozeplugin "github.com/doze-dev/doze-sdk/plugin"
 )
 
-func main() {
-	// The engine config crosses the wire as gob, so its concrete type is registered.
-	gob.Register(&valkey.Config{})
-	dozeplugin.Serve(valkey.Driver{})
-}
+func main() { dozeplugin.Main(valkey.Driver{}, &valkey.Config{}) }

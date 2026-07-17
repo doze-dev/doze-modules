@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/hashicorp/hcl/v2/gohcl"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -38,8 +37,8 @@ func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engi
 			Filter   map[string][]string `hcl:"filter,optional"`
 		} `hcl:"subscribe,block"`
 	}
-	if d := gohcl.DecodeBody(body, ctx, &raw); d.HasErrors() {
-		return nil, fmt.Errorf("%s", d.Error())
+	if err := engine.DecodeStrict(body, ctx, &raw); err != nil {
+		return nil, err
 	}
 	c := &Config{SQS: raw.SQS}
 	for _, s := range raw.Subs {
