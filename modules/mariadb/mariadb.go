@@ -52,7 +52,7 @@ func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.
 	if pin, ok := lk.Get("mariadb", spec, plat); ok && pin.Resolved != "" {
 		full = pin.Resolved
 		expectedSHA = pin.Hashes[plat.Triple]
-	} else if spec.IsExact() {
+	} else if isExactFull(spec) {
 		full = spec.String()
 	} else {
 		v, err := fetch.ResolveMajor("mariadb", spec.String())
@@ -71,6 +71,16 @@ func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.
 	}
 	lk.Record("mariadb", spec, plat, engine.Pin{Resolved: full, Source: "mirror", Hashes: hashes})
 	return engine.Toolchain{Engine: "mariadb", Full: full, BinDir: binDir}, nil
+}
+
+// isExactFull reports whether the declared version names a FULL MariaDB
+// release (x.y.z). MariaDB's engine MAJOR is the release LINE — two-part, like
+// temporal: "11.4" is what Describe() documents and what the binaries index
+// keys (major_parts: 2) — so a bare "11.4" resolves through the mirror;
+// engine.VersionSpec.IsExact (any dot = exact) would wrongly treat it as an
+// artifact version and 404.
+func isExactFull(spec engine.VersionSpec) bool {
+	return strings.Count(spec.String(), ".") >= 2
 }
 
 // Provision implements engine.Driver.

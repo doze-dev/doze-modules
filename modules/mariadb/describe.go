@@ -11,7 +11,7 @@ func (Driver) Describe() engine.Description {
 		Category:     "database",
 		Description:  "A socket-only MariaDB backend behind the doze proxy, with declarative databases, users, and grants. The instance database is created automatically; connect via DATABASE_URL.",
 		Port:         3306,
-		Versions:     []string{"11"},
+		Versions:     []string{"11.4", "11.8", "12.2"},
 		Source:       "doze/mariadb",
 		Homepage:     "https://mariadb.org",
 		ExampleLabel: "app",
