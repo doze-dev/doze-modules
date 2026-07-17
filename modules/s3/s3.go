@@ -11,7 +11,6 @@ import (
 // New returns the configured s3 driver (BaseDriver populated).
 func New() Driver { return Driver{awslocal.BaseDriver{Name: "s3", EndpointEnv: "AWS_ENDPOINT_URL_S3"}} }
 
-
 // Driver is the S3 engine driver. It embeds BaseDriver for the resolve/spawn/
 // ready/connstring/env boilerplate and adds DecodeConfig + Converge.
 type Driver struct {

@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -157,7 +156,7 @@ func settings(cfg *Config) [][2]string {
 	}
 	// Raw postgresql.conf passthrough, applied after the typed tuning so it can
 	// override it. Sorted for deterministic output. Locked params are skipped.
-	for _, k := range sortedKeys(cfg.Settings) {
+	for _, k := range engine.SortedKeys(cfg.Settings) {
 		if lockedSettings[strings.ToLower(k)] {
 			continue
 		}
@@ -167,15 +166,6 @@ func settings(cfg *Config) [][2]string {
 	// last so it always wins, even over a user `settings` entry.
 	out = append(out, [2]string{"listen_addresses", quote("")})
 	return out
-}
-
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 func quote(s string) string { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }

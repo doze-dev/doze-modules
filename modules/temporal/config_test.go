@@ -98,12 +98,14 @@ func TestCapabilities(t *testing.T) {
 
 // Temporal's engine major is two-part ("1.1"): it must resolve through the
 // mirror's versions map, not be taken as an exact artifact version — that
-// exact confusion shipped 0.2.1 unable to resolve any toolchain.
+// exact confusion shipped 0.2.1 unable to resolve any toolchain. Resolve uses
+// engine.ExactDots(2); this pins the classification the driver relies on.
 func TestVersionClassification(t *testing.T) {
-	if isExactFull("1.1") {
+	exact := engine.ExactDots(2)
+	if _, ok := exact("1.1"); ok {
 		t.Fatal(`"1.1" is temporal's MAJOR, not a full release`)
 	}
-	if !isExactFull("1.1.0") {
+	if _, ok := exact("1.1.0"); !ok {
 		t.Fatal(`"1.1.0" names a full release`)
 	}
 }

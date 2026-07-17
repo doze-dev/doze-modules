@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/doze-dev/doze-sdk/engine"
@@ -80,20 +79,11 @@ func writeConf(dataDir string, cfg *Config) error {
 	if cfg.Collation != "" {
 		fmt.Fprintf(&b, "collation-server = %s\n", cfg.Collation)
 	}
-	for _, k := range sortedKeys(cfg.Settings) {
+	for _, k := range engine.SortedKeys(cfg.Settings) {
 		if lockedSettings[strings.ToLower(k)] {
 			continue
 		}
 		fmt.Fprintf(&b, "%s = %s\n", k, cfg.Settings[k])
 	}
 	return os.WriteFile(filepath.Join(dataDir, "doze.cnf"), []byte(b.String()), 0o600)
-}
-
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

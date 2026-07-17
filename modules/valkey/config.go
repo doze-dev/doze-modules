@@ -1,8 +1,6 @@
 package valkey
 
 import (
-	"sort"
-
 	"github.com/hashicorp/hcl/v2"
 
 	"github.com/doze-dev/doze-sdk/engine"
@@ -52,14 +50,4 @@ func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, _ string, _ engi
 		c.Save = *raw.Save
 	}
 	return c, nil
-}
-
-// sortedKeys returns the keys of m in deterministic order.
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }

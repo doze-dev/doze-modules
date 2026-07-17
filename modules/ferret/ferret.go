@@ -30,7 +30,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/doze-dev/doze-sdk/engine"
@@ -112,33 +111,21 @@ func requireV2(spec engine.VersionSpec) error {
 	return nil
 }
 
-// ensure resolves+downloads one component for spec (an exact version or a major/
-// minor to resolve against the mirror), recording its pin so the lockfile freezes
-// the exact artifacts. It returns the bin dir and the resolved full version.
+// ensure resolves+downloads one component for spec (an exact version or a
+// major to resolve against the mirror), recording its pin so the lockfile
+// freezes the exact artifacts. It returns the bin dir and the resolved full
+// version. Exactness covers both components: ferretdb fulls are three-part
+// (2.7.0), documentdb's carry a dash (0.112-0) — a dash-bearing spec is always
+// an exact artifact version, never a major.
 func ensure(ctx context.Context, lk engine.Locker, fetch engine.Fetcher, plat engine.Platform, eng string, spec engine.VersionSpec) (binDir, full string, err error) {
-	full = string(spec)
-	expectedSHA := ""
-	if pin, ok := lk.Get(eng, spec, plat); ok && pin.Resolved != "" {
-		full = pin.Resolved
-		expectedSHA = pin.Hashes[plat.Triple]
-	} else if strings.Count(strings.TrimPrefix(full, "v"), ".") < 2 {
-		// A major/minor (e.g. "2" or "2.7"): resolve to the newest full version.
-		resolved, rerr := fetch.ResolveMajor(eng, string(spec))
-		if rerr != nil {
-			return "", "", rerr
-		}
-		full = resolved
-	}
-	binDir, digest, err := fetch.Ensure(ctx, eng, full, plat, expectedSHA)
+	tc, err := engine.ResolveVia(ctx, lk, fetch, plat, eng, spec, func(v engine.VersionSpec) (string, bool) {
+		s := strings.TrimPrefix(v.String(), "v")
+		return v.String(), strings.Count(s, ".") >= 2 || strings.Contains(s, "-")
+	})
 	if err != nil {
 		return "", "", err
 	}
-	hashes := map[string]string{}
-	if digest != "" {
-		hashes[plat.Triple] = digest
-	}
-	lk.Record(eng, spec, plat, engine.Pin{Resolved: full, Source: "mirror", Hashes: hashes})
-	return binDir, full, nil
+	return tc.BinDir, tc.Full, nil
 }
 
 // Provision implements engine.Driver: initialize the private Postgres cluster
@@ -328,20 +315,8 @@ func freePort(exclude ...int) (int, error) {
 // clearStaleLock refuses to double-start a running backend and clears a stale
 // postmaster.pid (and orphaned socket) left by a crash.
 func clearStaleLock(inst engine.Instance, pgData, pgSock string) error {
-	lockPath := filepath.Join(pgData, "postmaster.pid")
-	raw, err := os.ReadFile(lockPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
+	if err := engine.ClearStaleLock(fmt.Sprintf("documentdb %q", inst.Name), filepath.Join(pgData, "postmaster.pid")); err != nil {
 		return err
-	}
-	lines := strings.SplitN(string(raw), "\n", 2)
-	if pid, convErr := strconv.Atoi(strings.TrimSpace(lines[0])); convErr == nil && pid > 0 && processAlive(pid) {
-		return fmt.Errorf("documentdb %q appears to already be running (pid %d); remove %s if you are sure it is not", inst.Name, pid, lockPath)
-	}
-	if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("removing stale lock: %w", err)
 	}
 	// best-effort: drop any orphaned unix socket files
 	if entries, err := os.ReadDir(pgSock); err == nil {
@@ -352,14 +327,4 @@ func clearStaleLock(inst engine.Instance, pgData, pgSock string) error {
 		}
 	}
 	return nil
-}
-
-// processAlive reports whether pid is a live process (signal 0 probe) — used to
-// detect a stale lock from a crashed instance.
-func processAlive(pid int) bool {
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-	return p.Signal(syscall.Signal(0)) == nil
 }

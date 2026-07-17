@@ -24,7 +24,6 @@ func New() Driver {
 	}}
 }
 
-
 // Driver is the Lambda engine driver.
 type Driver struct {
 	awslocal.BaseDriver

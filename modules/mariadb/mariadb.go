@@ -14,9 +14,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
-	"syscall"
 	"time"
 
 	"github.com/doze-dev/doze-sdk/engine"
@@ -43,44 +40,15 @@ func (Driver) Type() string { return "mariadb" }
 // NominalPort returns the socket-naming port the runtime should assign.
 func (Driver) NominalPort() int { return nominalPort }
 
-// Resolve implements engine.Driver.
+// Resolve implements engine.Driver. MariaDB's engine MAJOR is the release LINE
+// — two-part, like temporal: "11.4" is what Describe() documents and what the
+// binaries index keys (major_parts: 2) — so only a three-part spec (11.4.5) is
+// an exact artifact pin and "11.4" resolves through the mirror's majors map.
 func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.Platform, lk engine.Locker, fetch engine.Fetcher) (engine.Toolchain, error) {
 	if dir := os.Getenv(envBinDir); dir != "" {
 		return engine.Toolchain{Engine: "mariadb", BinDir: dir, Full: spec.String()}, nil
 	}
-	full, expectedSHA := "", ""
-	if pin, ok := lk.Get("mariadb", spec, plat); ok && pin.Resolved != "" {
-		full = pin.Resolved
-		expectedSHA = pin.Hashes[plat.Triple]
-	} else if isExactFull(spec) {
-		full = spec.String()
-	} else {
-		v, err := fetch.ResolveMajor("mariadb", spec.String())
-		if err != nil {
-			return engine.Toolchain{}, err
-		}
-		full = v
-	}
-	binDir, digest, err := fetch.Ensure(ctx, "mariadb", full, plat, expectedSHA)
-	if err != nil {
-		return engine.Toolchain{}, err
-	}
-	hashes := map[string]string{}
-	if digest != "" {
-		hashes[plat.Triple] = digest
-	}
-	lk.Record("mariadb", spec, plat, engine.Pin{Resolved: full, Source: "mirror", Hashes: hashes})
-	return engine.Toolchain{Engine: "mariadb", Full: full, BinDir: binDir}, nil
-}
-
-// isExactFull reports whether the declared version names a FULL MariaDB
-// release (x.y.z). MariaDB's engine MAJOR is the release LINE — two-part, like
-// temporal: "11.4" is what Describe() documents and what the binaries index
-// keys (major_parts: 2) — so a bare "11.4" resolves through the mirror;
-// engine.VersionSpec.IsExact (any dot = exact) would wrongly treat it as an
-// artifact version and 404.
-func isExactFull(spec engine.VersionSpec) bool {
-	return strings.Count(spec.String(), ".") >= 2
+	return engine.ResolveVia(ctx, lk, fetch, plat, "mariadb", spec, engine.ExactDots(2))
 }
 
 // Provision implements engine.Driver.
@@ -166,28 +134,9 @@ func mariaConfig(inst engine.Instance) (*Config, error) {
 // clearStaleLock refuses to double-start a running backend and clears a stale
 // pid file (and orphaned socket) left by a crash.
 func clearStaleLock(inst engine.Instance) error {
-	lockPath := filepath.Join(inst.DataDir, "mariadbd.pid")
-	raw, err := os.ReadFile(lockPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
+	if err := engine.ClearStaleLock(fmt.Sprintf("instance %q", inst.Name), filepath.Join(inst.DataDir, "mariadbd.pid")); err != nil {
 		return err
-	}
-	if pid, convErr := strconv.Atoi(strings.TrimSpace(string(raw))); convErr == nil && pid > 0 && processAlive(pid) {
-		return fmt.Errorf("instance %q appears to already be running (pid %d); remove %s if you are sure it is not", inst.Name, pid, lockPath)
-	}
-	if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("removing stale lock: %w", err)
 	}
 	_ = os.Remove(backendSocketPath(inst.SocketDir))
 	return nil
-}
-
-func processAlive(pid int) bool {
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-	return p.Signal(syscall.Signal(0)) == nil
 }

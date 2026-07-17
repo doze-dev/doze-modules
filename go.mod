@@ -31,7 +31,7 @@ require (
 require (
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/doze-dev/doze-sdk v0.5.1-0.20260717212711-bec5d3ee707b
+	github.com/doze-dev/doze-sdk v0.6.0
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect

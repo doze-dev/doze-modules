@@ -25,35 +25,13 @@ type Driver struct{}
 // Type implements engine.Driver.
 func (Driver) Type() string { return "valkey" }
 
-// Resolve implements engine.Driver. Valkey versions are already three-part
-// (e.g. 9.1.0), so an exact spec is used verbatim.
+// Resolve implements engine.Driver. Valkey fulls are three-part (9.1.0), so
+// only a three-part spec is an exact artifact pin; "9" resolves via the mirror.
 func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.Platform, lk engine.Locker, fetch engine.Fetcher) (engine.Toolchain, error) {
 	if dir := os.Getenv(envBinDir); dir != "" {
 		return engine.Toolchain{Engine: "valkey", BinDir: dir, Full: spec.String()}, nil
 	}
-	full, expectedSHA := "", ""
-	if pin, ok := lk.Get("valkey", spec, plat); ok && pin.Resolved != "" {
-		full = pin.Resolved
-		expectedSHA = pin.Hashes[plat.Triple]
-	} else if spec.IsExact() {
-		full = spec.String()
-	} else {
-		v, err := fetch.ResolveMajor("valkey", spec.String())
-		if err != nil {
-			return engine.Toolchain{}, err
-		}
-		full = v
-	}
-	binDir, digest, err := fetch.Ensure(ctx, "valkey", full, plat, expectedSHA)
-	if err != nil {
-		return engine.Toolchain{}, err
-	}
-	hashes := map[string]string{}
-	if digest != "" {
-		hashes[plat.Triple] = digest
-	}
-	lk.Record("valkey", spec, plat, engine.Pin{Resolved: full, Source: "mirror", Hashes: hashes})
-	return engine.Toolchain{Engine: "valkey", Full: full, BinDir: binDir}, nil
+	return engine.ResolveVia(ctx, lk, fetch, plat, "valkey", spec, engine.ExactDots(2))
 }
 
 // Provision implements engine.Driver: Valkey just needs a data directory.
@@ -98,7 +76,7 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 		if cfg.MaxmemoryPolicy != "" {
 			args = append(args, "--maxmemory-policy", cfg.MaxmemoryPolicy)
 		}
-		for _, k := range sortedKeys(cfg.Settings) {
+		for _, k := range engine.SortedKeys(cfg.Settings) {
 			args = append(args, "--"+k, cfg.Settings[k])
 		}
 	}

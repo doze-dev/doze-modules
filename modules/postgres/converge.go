@@ -169,7 +169,7 @@ func convergeRole(ctx context.Context, psql *psqlRunner, role Role) error {
 	// (Memberships are granted by Converge in a second pass, after every
 	// declared role exists — declaration order must not matter.)
 	// Per-role parameters: ALTER ROLE … SET key = value (search_path, timeouts, …).
-	for _, k := range sortedKeys(role.Config) {
+	for _, k := range engine.SortedKeys(role.Config) {
 		if err := psql.execRetry(ctx, "postgres", fmt.Sprintf("ALTER ROLE %s SET %s = %s", sqlIdent(role.Name), sqlIdent(k), sqlLit(role.Config[k]))); err != nil {
 			return fmt.Errorf("setting role parameter %q: %w", k, err)
 		}

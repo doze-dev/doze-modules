@@ -26,7 +26,6 @@ func New() Driver {
 	}}
 }
 
-
 // Driver is the aws-console engine driver.
 type Driver struct {
 	awslocal.BaseDriver

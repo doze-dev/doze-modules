@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/doze-dev/doze-sdk/engine"
@@ -27,35 +26,13 @@ type Driver struct{}
 // Type implements engine.Driver.
 func (Driver) Type() string { return "kvrocks" }
 
-// Resolve implements engine.Driver. Kvrocks versions are three-part (2.15.0),
-// so an exact spec is used verbatim.
+// Resolve implements engine.Driver. Kvrocks fulls are three-part (2.16.0), so
+// only a three-part spec is an exact artifact pin; "2" resolves via the mirror.
 func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.Platform, lk engine.Locker, fetch engine.Fetcher) (engine.Toolchain, error) {
 	if dir := os.Getenv(envBinDir); dir != "" {
 		return engine.Toolchain{Engine: "kvrocks", BinDir: dir, Full: spec.String()}, nil
 	}
-	full, expectedSHA := "", ""
-	if pin, ok := lk.Get("kvrocks", spec, plat); ok && pin.Resolved != "" {
-		full = pin.Resolved
-		expectedSHA = pin.Hashes[plat.Triple]
-	} else if spec.IsExact() {
-		full = spec.String()
-	} else {
-		v, err := fetch.ResolveMajor("kvrocks", spec.String())
-		if err != nil {
-			return engine.Toolchain{}, err
-		}
-		full = v
-	}
-	binDir, digest, err := fetch.Ensure(ctx, "kvrocks", full, plat, expectedSHA)
-	if err != nil {
-		return engine.Toolchain{}, err
-	}
-	hashes := map[string]string{}
-	if digest != "" {
-		hashes[plat.Triple] = digest
-	}
-	lk.Record("kvrocks", spec, plat, engine.Pin{Resolved: full, Source: "mirror", Hashes: hashes})
-	return engine.Toolchain{Engine: "kvrocks", Full: full, BinDir: binDir}, nil
+	return engine.ResolveVia(ctx, lk, fetch, plat, "kvrocks", spec, engine.ExactDots(2))
 }
 
 // Provision implements engine.Driver: Kvrocks just needs a data directory;
@@ -108,7 +85,7 @@ func writeConf(path string, inst engine.Instance, socket string) error {
 			fmt.Fprintf(&b, "workers %d\n", cfg.Workers)
 		}
 		// Raw kvrocks.conf passthrough, before namespaces so it can't clobber them.
-		for _, k := range sortedKeys(cfg.Settings) {
+		for _, k := range engine.SortedKeys(cfg.Settings) {
 			fmt.Fprintf(&b, "%s %s\n", k, cfg.Settings[k])
 		}
 		for _, ns := range cfg.Namespaces {
@@ -116,16 +93,6 @@ func writeConf(path string, inst engine.Instance, socket string) error {
 		}
 	}
 	return os.WriteFile(path, []byte(b.String()), 0o600)
-}
-
-// sortedKeys returns the keys of m in deterministic order.
-func sortedKeys(m map[string]string) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	return keys
 }
 
 // BackendSocket implements engine.Driver.

@@ -15,7 +15,6 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{Name: "kms", EndpointEnv: "AWS_ENDPOINT_URL_KMS"}}
 }
 
-
 // Driver is the KMS engine driver.
 type Driver struct {
 	awslocal.BaseDriver

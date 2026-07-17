@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/doze-dev/doze-sdk/engine"
@@ -47,30 +46,12 @@ func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.
 		return engine.Toolchain{Engine: "postgres", BinDir: dir, Full: full}, nil
 	}
 
-	full, expectedSHA := "", ""
-	if pin, ok := lk.Get("postgres", spec, plat); ok && pin.Resolved != "" {
-		full = pin.Resolved
-		expectedSHA = pin.Hashes[plat.Triple]
-	} else if spec.IsExact() {
-		full = normalizeExact(spec.String())
-	} else {
-		v, err := fetch.ResolveMajor("postgres", spec.String())
-		if err != nil {
-			return engine.Toolchain{}, err
-		}
-		full = v
-	}
-
-	binDir, digest, err := fetch.Ensure(ctx, "postgres", full, plat, expectedSHA)
-	if err != nil {
-		return engine.Toolchain{}, err
-	}
-	hashes := map[string]string{}
-	if digest != "" {
-		hashes[plat.Triple] = digest
-	}
-	lk.Record("postgres", spec, plat, engine.Pin{Resolved: full, Source: "mirror", Hashes: hashes})
-	return engine.Toolchain{Engine: "postgres", Full: full, BinDir: binDir}, nil
+	// Exactness with a twist: a user-facing exact version is two-part (16.14)
+	// but the archive versions are three-part, so the predicate normalizes.
+	return engine.ResolveVia(ctx, lk, fetch, plat, "postgres", spec,
+		func(v engine.VersionSpec) (string, bool) {
+			return normalizeExact(v.String()), v.IsExact()
+		})
 }
 
 // normalizeExact maps a real two-part Postgres version (16.14) to the three-part
@@ -161,31 +142,9 @@ func pgConfig(inst engine.Instance) (*Config, error) {
 // clearStaleLock refuses to double-start a running backend and clears a stale
 // postmaster.pid (and orphaned socket) left by a crash.
 func clearStaleLock(inst engine.Instance) error {
-	lockPath := filepath.Join(inst.DataDir, "postmaster.pid")
-	raw, err := os.ReadFile(lockPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
+	if err := engine.ClearStaleLock(fmt.Sprintf("instance %q", inst.Name), filepath.Join(inst.DataDir, "postmaster.pid")); err != nil {
 		return err
-	}
-	lines := strings.SplitN(string(raw), "\n", 2)
-	if pid, convErr := strconv.Atoi(strings.TrimSpace(lines[0])); convErr == nil && pid > 0 && processAlive(pid) {
-		return fmt.Errorf("instance %q appears to already be running (pid %d); remove %s if you are sure it is not", inst.Name, pid, lockPath)
-	}
-	if err := os.Remove(lockPath); err != nil && !os.IsNotExist(err) {
-		return fmt.Errorf("removing stale lock: %w", err)
 	}
 	_ = os.Remove(filepath.Join(inst.SocketDir, fmt.Sprintf(".s.PGSQL.%d", inst.Port)))
 	return nil
-}
-
-// processAlive reports whether pid is a live process (signal 0 probe) — used to
-// detect a stale postmaster.pid from a crashed instance.
-func processAlive(pid int) bool {
-	p, err := os.FindProcess(pid)
-	if err != nil {
-		return false
-	}
-	return p.Signal(syscall.Signal(0)) == nil
 }

@@ -21,7 +21,6 @@ func New() Driver {
 	}}
 }
 
-
 // Driver is the SNS engine driver.
 type Driver struct {
 	awslocal.BaseDriver

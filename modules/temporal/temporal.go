@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -38,29 +37,10 @@ func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.
 	if dir := os.Getenv(envBinDir); dir != "" {
 		return engine.Toolchain{Engine: "temporal", BinDir: dir, Full: spec.String()}, nil
 	}
-	full, expectedSHA := "", ""
-	if pin, ok := lk.Get("temporal", spec, plat); ok && pin.Resolved != "" {
-		full = pin.Resolved
-		expectedSHA = pin.Hashes[plat.Triple]
-	} else if isExactFull(spec) {
-		full = spec.String()
-	} else {
-		v, err := fetch.ResolveMajor("temporal", spec.String())
-		if err != nil {
-			return engine.Toolchain{}, err
-		}
-		full = v
-	}
-	binDir, digest, err := fetch.Ensure(ctx, "temporal", full, plat, expectedSHA)
-	if err != nil {
-		return engine.Toolchain{}, err
-	}
-	hashes := map[string]string{}
-	if digest != "" {
-		hashes[plat.Triple] = digest
-	}
-	lk.Record("temporal", spec, plat, engine.Pin{Resolved: full, Source: "mirror", Hashes: hashes})
-	return engine.Toolchain{Engine: "temporal", Full: full, BinDir: binDir}, nil
+	// Temporal's engine MAJOR is two-part ("1.1" is what Describe() declares
+	// and what the binaries index keys), so only a three-part spec (1.1.0) is
+	// an exact artifact pin; "1.1" resolves through the mirror's majors map.
+	return engine.ResolveVia(ctx, lk, fetch, plat, "temporal", spec, engine.ExactDots(2))
 }
 
 // Provision implements engine.Driver: the dev server auto-migrates its SQLite DB
@@ -147,12 +127,3 @@ func configOf(inst engine.Instance) *Config {
 }
 
 func portOf(inst engine.Instance) int { return configOf(inst).Port }
-
-// isExactFull reports whether the declared version names a FULL temporal CLI
-// release (x.y.z). Temporal's engine MAJOR is two-part — "1.1" is what
-// Describe() declares and what the binaries index keys — so a bare "1.1"
-// resolves through the mirror; engine.VersionSpec.IsExact (any dot = exact)
-// would wrongly treat it as an artifact version and 404.
-func isExactFull(spec engine.VersionSpec) bool {
-	return strings.Count(spec.String(), ".") >= 2
-}

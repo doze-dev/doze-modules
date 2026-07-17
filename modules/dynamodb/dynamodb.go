@@ -16,7 +16,6 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{Name: "dynamodb", EndpointEnv: "AWS_ENDPOINT_URL_DYNAMODB"}}
 }
 
-
 // Driver is the DynamoDB engine driver.
 type Driver struct {
 	awslocal.BaseDriver

@@ -12,7 +12,6 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{Name: "ssm", EndpointEnv: "AWS_ENDPOINT_URL_SSM"}}
 }
 
-
 // Driver is the SSM Parameter Store engine driver.
 type Driver struct {
 	awslocal.BaseDriver

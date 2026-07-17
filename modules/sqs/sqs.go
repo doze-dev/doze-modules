@@ -16,7 +16,6 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{Name: "sqs", EndpointEnv: "AWS_ENDPOINT_URL_SQS"}}
 }
 
-
 // Driver is the SQS engine driver.
 type Driver struct {
 	awslocal.BaseDriver
