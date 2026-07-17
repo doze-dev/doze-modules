@@ -67,10 +67,9 @@ func (Driver) Provisioned(dataDir string) bool {
 	return err == nil && fi.IsDir()
 }
 
-// Plan implements engine.Spawner: a single supervised valkey-server, gated on its
-// unix socket accepting connections. Core executes and supervises it
-// path used when valkey runs as an out-of-process plugin (the Spawn/WaitReady above
-// remain for the in-tree LegacySpawner fallback).
+// Plan implements engine.Spawner: a single supervised valkey-server, gated on
+// its unix socket accepting connections. Core executes and supervises the
+// process from this plan.
 func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain) (engine.SpawnPlan, error) {
 	if err := os.MkdirAll(inst.SocketDir, 0o700); err != nil {
 		return engine.SpawnPlan{}, fmt.Errorf("creating socket dir: %w", err)
@@ -79,14 +78,17 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 	_ = os.Remove(socket) // clear any stale socket from a crash
 	args := []string{"--port", "0", "--unixsocket", socket, "--dir", inst.DataDir, "--daemonize", "no"}
 	save, appendonly := "", "no"
-	if cfg, ok := inst.Spec.(*Config); ok && cfg != nil {
+	cfg, _ := inst.Spec.(*Config)
+	if cfg != nil {
 		if cfg.Save != "" {
 			save = cfg.Save
 		}
 		if cfg.Appendonly {
 			appendonly = "yes"
 		}
-		args = append(args, "--save", save, "--appendonly", appendonly)
+	}
+	args = append(args, "--save", save, "--appendonly", appendonly)
+	if cfg != nil {
 		if cfg.Password != "" {
 			args = append(args, "--requirepass", cfg.Password)
 		}
@@ -99,8 +101,6 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 		for _, k := range sortedKeys(cfg.Settings) {
 			args = append(args, "--"+k, cfg.Settings[k])
 		}
-	} else {
-		args = append(args, "--save", save, "--appendonly", appendonly)
 	}
 	return engine.SpawnPlan{Specs: []engine.SpawnSpec{{
 		Name:  inst.Name,

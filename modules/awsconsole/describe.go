@@ -18,8 +18,6 @@ func (Driver) Describe() engine.Description {
 		Example: `aws-console "console" {
   depends_on = [uploads, jobs, events]
 }`,
-		Config: []engine.ConfigArg{
-			{Name: "prefix", Type: "string", Default: "/_console", Desc: "URL path the console is mounted under."},
-		},
+		Config: []engine.ConfigArg{},
 	}
 }

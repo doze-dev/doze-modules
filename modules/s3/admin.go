@@ -56,7 +56,7 @@ func (Driver) Resources(ctx context.Context, inst engine.Instance, ep engine.End
 	}
 	var info map[string]string
 	if cfg.Versioning {
-		info = map[string]string{"versioning": "declared (unsupported by backend)"}
+		info = map[string]string{"versioning": "enabled"}
 	}
 	return []engine.Resource{{Kind: "bucket", Name: name, Status: status, Info: info}}, nil
 }

@@ -15,8 +15,6 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{Name: "kms", EndpointEnv: "AWS_ENDPOINT_URL_KMS"}}
 }
 
-// Logf is the sink for convergence warnings.
-var Logf = func(string, ...any) {}
 
 // Driver is the KMS engine driver.
 type Driver struct {

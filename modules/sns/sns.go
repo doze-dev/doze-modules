@@ -21,8 +21,6 @@ func New() Driver {
 	}}
 }
 
-// Logf is the sink for convergence warnings; cmd/doze points it at stderr.
-var Logf = func(string, ...any) {}
 
 // Driver is the SNS engine driver.
 type Driver struct {

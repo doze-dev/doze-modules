@@ -26,8 +26,7 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolc
 	}
 	if cfg.Versioning {
 		if err := enableVersioning(ctx, client, name); err != nil {
-			// The bolt backend does not support versioning; warn, don't fail.
-			Logf("warning: s3 %q: could not enable versioning (backend limitation): %v", name, err)
+			return fmt.Errorf("bucket %q: enabling versioning: %w", name, err)
 		}
 	}
 	return nil

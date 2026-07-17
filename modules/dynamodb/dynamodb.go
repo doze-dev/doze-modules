@@ -16,8 +16,6 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{Name: "dynamodb", EndpointEnv: "AWS_ENDPOINT_URL_DYNAMODB"}}
 }
 
-// Logf is the sink for convergence warnings; cmd/doze points it at stderr.
-var Logf = func(string, ...any) {}
 
 // Driver is the DynamoDB engine driver.
 type Driver struct {

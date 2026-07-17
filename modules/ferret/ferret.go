@@ -37,8 +37,6 @@ import (
 )
 
 const (
-	bootTimeout = 60 * time.Second
-
 	// ddbVersion pins the Postgres+extension backend — an implementation detail,
 	// NOT the user-facing version. The extension chain and the gateway are
 	// validated together, so the backend is fixed here (Postgres 18 is pinned
@@ -125,9 +123,11 @@ func ensure(ctx context.Context, lk engine.Locker, fetch engine.Fetcher, plat en
 		expectedSHA = pin.Hashes[plat.Triple]
 	} else if strings.Count(strings.TrimPrefix(full, "v"), ".") < 2 {
 		// A major/minor (e.g. "2" or "2.7"): resolve to the newest full version.
-		if resolved, rerr := fetch.ResolveMajor(eng, string(spec)); rerr == nil {
-			full = resolved
+		resolved, rerr := fetch.ResolveMajor(eng, string(spec))
+		if rerr != nil {
+			return "", "", rerr
 		}
+		full = resolved
 	}
 	binDir, digest, err := fetch.Ensure(ctx, eng, full, plat, expectedSHA)
 	if err != nil {
@@ -154,8 +154,7 @@ func (Driver) Provisioned(dataDir string) bool { return provisioned(dataDir) }
 // Plan implements engine.Spawner: documentdb is a two-process unit. Core's executor
 // starts the private Postgres (gated on pg_isready), runs the CREATE EXTENSION hook
 // once it is ready, then starts the FerretDB gateway (gated on its mongo socket) and
-// supervises the pair as one unit. This is the composite path used when documentdb
-// runs as an out-of-process plugin (Spawn above remains the in-tree fallback).
+// supervises the pair as one unit.
 func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain) (engine.SpawnPlan, error) {
 	pgData := pgDataDir(inst.DataDir)
 	pgSock := pgSocketDir(inst.SocketDir)

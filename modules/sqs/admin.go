@@ -290,14 +290,6 @@ func parseSend(input string) (sendPayload, error) {
 	return sendPayload{Body: input}, nil
 }
 
-// arnTail returns the resource name from an ARN (the part after the last colon).
-func arnTail(arn string) string {
-	if i := strings.LastIndex(arn, ":"); i >= 0 {
-		return arn[i+1:]
-	}
-	return arn
-}
-
 func queueStatus(a map[string]string) string {
 	if a == nil {
 		return ""

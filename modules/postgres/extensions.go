@@ -14,24 +14,6 @@ import (
 	"time"
 )
 
-// contrib is the set of extensions bundled with a standard Postgres build.
-// CREATE EXTENSION works for these out of the box; doze never installs a binary
-// for them.
-var contrib = map[string]bool{
-	"adminpack": true, "amcheck": true, "autoinc": true, "bloom": true,
-	"btree_gin": true, "btree_gist": true, "citext": true, "cube": true,
-	"dblink": true, "dict_int": true, "dict_xsyn": true, "earthdistance": true,
-	"file_fdw": true, "fuzzystrmatch": true, "hstore": true, "insert_username": true,
-	"intagg": true, "intarray": true, "isn": true, "lo": true, "ltree": true,
-	"moddatetime": true, "old_snapshot": true, "pageinspect": true,
-	"pg_buffercache": true, "pg_freespacemap": true, "pg_prewarm": true,
-	"pg_stat_statements": true, "pg_surgery": true, "pg_trgm": true,
-	"pg_visibility": true, "pgcrypto": true, "pgrowlocks": true, "pgstattuple": true,
-	"plpgsql": true, "postgres_fdw": true, "refint": true, "seg": true,
-	"sslinfo": true, "tablefunc": true, "tcn": true, "tsm_system_rows": true,
-	"tsm_system_time": true, "unaccent": true, "uuid-ossp": true, "xml2": true,
-}
-
 // installer lays prebuilt extension bundles into a toolchain.
 type installer struct {
 	pgConfig string

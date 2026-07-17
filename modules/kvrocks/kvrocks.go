@@ -71,8 +71,7 @@ func (Driver) Provisioned(dataDir string) bool {
 }
 
 // Plan implements engine.Spawner: a one-spec SpawnPlan core supervises, gated on
-// the RESP socket. It does the same pre-spawn prep Spawn did (socket dir + conf
-// file). Spawn/WaitReady remain for the in-tree LegacySpawner fallback.
+// the RESP socket, after pre-spawn prep (socket dir + conf file).
 func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain) (engine.SpawnPlan, error) {
 	if err := os.MkdirAll(inst.SocketDir, 0o700); err != nil {
 		return engine.SpawnPlan{}, fmt.Errorf("creating socket dir: %w", err)

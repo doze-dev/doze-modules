@@ -25,7 +25,6 @@ import (
 )
 
 type modulesFile struct {
-	DozeRef string                 `yaml:"doze_ref"`
 	Modules map[string]moduleEntry `yaml:"modules"`
 }
 

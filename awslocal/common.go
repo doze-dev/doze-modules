@@ -1,14 +1,14 @@
-// Package awslocal hosts doze's "local AWS" services (S3, SQS, SNS) inside the
-// doze binary itself. Each service is a plain net/http handler; the daemon runs
-// it as a child process via the hidden `doze __serve <service>` subcommand (see
-// Serve), fronts it with the per-instance proxy, and reaps it when idle — so the
-// same lazy boot-on-connect lifecycle as every other engine, with no external
-// binary, no Docker, and no JVM.
+// Package awslocal is the shared plumbing for doze's AWS-backed plugin
+// modules (S3, SQS, SNS, DynamoDB, …). Each module ships as an out-of-process
+// plugin whose service is a plain net/http handler from doze-aws; the plugin
+// re-execs ITSELF with a hidden `__serve <service>` argv (see BaseDriver and
+// Serve) to become that server, so core supervises it like any other engine —
+// lazy boot-on-connect, idle reaping, no external binary, no Docker, no JVM.
 //
-// This package is a leaf: the engine drivers (engine/{s3,sqs,sns}) embed
-// BaseDriver from here, and the service implementations (internal/{s3srv,sqssrv,
-// snssrv}) register their handler factories here. It imports neither, so there
-// is no cycle.
+// This package is a leaf shared by all AWS modules: BaseDriver (plan/serve
+// scaffold), PluginMain (whole plugin main()), the wire-protocol clients
+// (JSONCallDecode/QueryCall/RESTPost), peer-endpoint env plumbing (peerenv),
+// and small formatting helpers. It imports no module, so there is no cycle.
 package awslocal
 
 import (

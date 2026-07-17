@@ -24,8 +24,6 @@ func New() Driver {
 	}}
 }
 
-// Logf is the sink for convergence warnings.
-var Logf = func(string, ...any) {}
 
 // Driver is the Lambda engine driver.
 type Driver struct {

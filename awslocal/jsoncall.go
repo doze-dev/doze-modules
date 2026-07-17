@@ -112,11 +112,9 @@ func IsAWSErrorCode(err error, codes ...string) bool {
 	}
 	msg := err.Error()
 	for _, c := range codes {
-		if bytesContains(msg, c) {
+		if strings.Contains(msg, c) {
 			return true
 		}
 	}
 	return false
 }
-
-func bytesContains(s, sub string) bool { return bytes.Contains([]byte(s), []byte(sub)) }

@@ -16,8 +16,6 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{Name: "sqs", EndpointEnv: "AWS_ENDPOINT_URL_SQS"}}
 }
 
-// Logf is the sink for convergence warnings; cmd/doze points it at stderr.
-var Logf = func(string, ...any) {}
 
 // Driver is the SQS engine driver.
 type Driver struct {

@@ -26,8 +26,6 @@ func New() Driver {
 	}}
 }
 
-// Logf is the sink for any warnings (unused today; kept for parity).
-var Logf = func(string, ...any) {}
 
 // Driver is the aws-console engine driver.
 type Driver struct {

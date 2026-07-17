@@ -7,12 +7,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
-
-const bootTimeout = 15 * time.Second
 
 // BaseDriver implements the boilerplate shared by every local-AWS engine: there
 // is no toolchain to download (the service is built into doze), so Resolve is
@@ -116,17 +113,4 @@ func UnixHTTPClient(socket string) *http.Client {
 			},
 		},
 	}
-}
-
-// healthy reports whether the service answers HealthPath on its unix socket.
-func healthy(socket string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
-	defer cancel()
-	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://unix"+HealthPath, nil)
-	resp, err := UnixHTTPClient(socket).Do(req)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-	return resp.StatusCode == http.StatusOK
 }

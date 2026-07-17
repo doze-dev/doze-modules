@@ -95,9 +95,8 @@ func (Driver) Provision(ctx context.Context, inst engine.Instance, tc engine.Too
 func (Driver) Provisioned(dataDir string) bool { return provisioned(dataDir) }
 
 // Plan implements engine.Spawner: it returns a one-spec SpawnPlan that core's
-// supervisor runs and reaps, gated on pg_isready. It does the same pre-spawn prep
-// Spawn did (socket dir + stale-lock clearing) so the declarative path is
-// behaviour-identical; Spawn/WaitReady remain for the in-tree LegacySpawner path.
+// supervisor runs and reaps, gated on pg_isready, after pre-spawn prep
+// (socket dir + stale-lock clearing).
 func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain) (engine.SpawnPlan, error) {
 	if err := os.MkdirAll(inst.SocketDir, 0o700); err != nil {
 		return engine.SpawnPlan{}, fmt.Errorf("creating socket dir: %w", err)

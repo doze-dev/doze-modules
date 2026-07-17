@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -16,8 +17,10 @@ import (
 // EXTENSION expects.
 var extensionAliases = map[string]string{"pgvector": "vector"}
 
-// Logf, if set, receives convergence progress/warnings. The runtime installs it.
-var Logf = func(string, ...any) {}
+// logf reports convergence progress/warnings on stderr, which the plugin host
+// forwards into doze's logs. (An earlier exported Logf hook was never installed
+// by anything, so these messages silently vanished out-of-process.)
+func logf(format string, args ...any) { fmt.Fprintf(os.Stderr, format+"\n", args...) }
 
 // Converge brings an instance's cluster up to its declared state: roles, the
 // database itself, schemas, extensions, and grants. Every step is idempotent.
@@ -77,7 +80,7 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, tc engine.Tool
 		// optional, otherwise a hard convergence error.
 		soft := func(format string, args ...any) error {
 			if ext.Optional {
-				Logf("warning: "+format, args...)
+				logf("warning: "+format, args...)
 				return nil
 			}
 			return fmt.Errorf(format, args...)
@@ -89,7 +92,7 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, tc engine.Tool
 				}
 				continue
 			}
-			Logf("installed extension %q into the Postgres toolchain", name)
+			logf("installed extension %q into the Postgres toolchain", name)
 		}
 		if !inst2.available(name) {
 			if e := soft("extension %q is not available for %q (declare a `source` bundle, "+

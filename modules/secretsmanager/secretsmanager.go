@@ -16,8 +16,6 @@ func New() Driver {
 	return Driver{awslocal.BaseDriver{Name: "secretsmanager", EndpointEnv: "AWS_ENDPOINT_URL_SECRETSMANAGER"}}
 }
 
-// Logf is the sink for convergence warnings.
-var Logf = func(string, ...any) {}
 
 // Driver is the Secrets Manager engine driver.
 type Driver struct {
