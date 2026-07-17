@@ -30,7 +30,7 @@ model: doze core is a thin host, every engine is a separately-versioned module.
 | [`kms`](https://doze.nerdmenot.in/registry/doze/kms) | security | built-in | Local AWS KMS with real local crypto. |
 | [`kvrocks`](https://doze.nerdmenot.in/registry/doze/kvrocks) | database | 2 | Redis API on RocksDB — durable, low-RAM. |
 | [`lambda`](https://doze.nerdmenot.in/registry/doze/lambda) | compute | built-in | Local AWS Lambda — real processes, no Docker. |
-| [`mariadb`](https://doze.nerdmenot.in/registry/doze/mariadb) | database | 11 | MySQL-compatible relational database |
+| [`mariadb`](https://doze.nerdmenot.in/registry/doze/mariadb) | database | 11.4 · 11.8 · 12.2 | MySQL-compatible relational database |
 | [`postgres`](https://doze.nerdmenot.in/registry/doze/postgres) | database | 14 · 15 · 16 · 17 · 18 | Real local Postgres, declared not scripted. |
 | [`s3`](https://doze.nerdmenot.in/registry/doze/s3) | storage | built-in | Local S3 buckets, no LocalStack. |
 | [`secretsmanager`](https://doze.nerdmenot.in/registry/doze/secretsmanager) | config | built-in | Local AWS Secrets Manager for app secrets. |
