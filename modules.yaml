@@ -36,8 +36,13 @@ modules:
   # any-dot-is-exact rule made 0.2.1 look up a "1.1" artifact and 404 on every
   # toolchain resolve (the module was unbootable since release).
   temporal:   { path: ./modules/temporal/plugin,   version: "0.2.2" }
-  # JVM-free single-node Kafka-protocol broker (embeds doze-kafka):
-  kafka:          { path: ./modules/kafka/plugin,          version: "0.1.0" }
+  # JVM-free single-node Kafka-protocol broker (embeds doze-kafka).
+  # 0.1.1: embeds the doze-kafka web console (broker port+1 on the instance IP)
+  # and Admin resources for the dash (topics w/ high-water + per-partition
+  # offsets, groups w/ lag) — doze-kafka v1.2.0.
+  kafka:          { path: ./modules/kafka/plugin,          version: "0.1.1" }
   # THE local AWS: the whole doze-aws stack (all ten services + web console +
   # traffic recorder) as ONE instance — one block, one process, one endpoint.
-  aws:            { path: ./modules/aws/plugin,            version: "0.1.0" }
+  # 0.1.1: glance API for the doze dash (service board + attention + wire) and
+  # path-prefix-aware SQS URLs — doze-aws v0.3.0.
+  aws:            { path: ./modules/aws/plugin,            version: "0.1.1" }

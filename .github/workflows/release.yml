@@ -123,8 +123,8 @@ jobs:
             temporal)
               dir=$(fetch temporal 1.1)
               { echo "DOZE_TEMPORAL_BINDIR=$dir"; echo "DOZE_TEMPORAL_VERSION=1.1"; } >> "$GITHUB_ENV" ;;
-            s3|sqs|sns)
-              echo "built-in engine: no backend to fetch" ;;
+            kafka|aws)
+              echo "embedded engine (doze-kafka / doze-aws compiled into the plugin): no backend to fetch" ;;
             *)
               echo "::error::module '${{ matrix.module }}' has no backend mapping in release.yml — add one" >&2
               exit 1 ;;
