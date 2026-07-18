@@ -9,21 +9,12 @@ import (
 	"github.com/doze-dev/doze-sdk/engine"
 	"github.com/doze-dev/doze-sdk/modtool"
 
-	awsconsole "github.com/doze-dev/doze-modules/modules/awsconsole"
-	"github.com/doze-dev/doze-modules/modules/dynamodb"
-	"github.com/doze-dev/doze-modules/modules/eventbridge"
+	awsmod "github.com/doze-dev/doze-modules/modules/aws"
 	"github.com/doze-dev/doze-modules/modules/ferret"
 	"github.com/doze-dev/doze-modules/modules/kafka"
-	"github.com/doze-dev/doze-modules/modules/kms"
 	"github.com/doze-dev/doze-modules/modules/kvrocks"
-	"github.com/doze-dev/doze-modules/modules/lambda"
 	"github.com/doze-dev/doze-modules/modules/mariadb"
 	"github.com/doze-dev/doze-modules/modules/postgres"
-	"github.com/doze-dev/doze-modules/modules/s3"
-	"github.com/doze-dev/doze-modules/modules/secretsmanager"
-	"github.com/doze-dev/doze-modules/modules/sns"
-	"github.com/doze-dev/doze-modules/modules/sqs"
-	"github.com/doze-dev/doze-modules/modules/ssm"
 	"github.com/doze-dev/doze-modules/modules/temporal"
 	"github.com/doze-dev/doze-modules/modules/valkey"
 )
@@ -36,21 +27,12 @@ import (
 // resolves. Coverage is mandatory: dzm (build) and dzm meta both fail on a
 // modules.yaml entry with no describer.
 var describers = map[string]engine.Describer{
-	"aws-console":    awsconsole.New(),
-	"dynamodb":       dynamodb.New(),
-	"eventbridge":    eventbridge.New(),
+	"aws":            awsmod.New(),
 	"ferret":         ferret.Driver{},
 	"kafka":          kafka.New(),
-	"kms":            kms.New(),
 	"kvrocks":        kvrocks.Driver{},
-	"lambda":         lambda.New(),
 	"mariadb":        mariadb.Driver{},
 	"postgres":       postgres.Driver{},
-	"s3":             s3.New(),
-	"secretsmanager": secretsmanager.New(),
-	"sns":            sns.New(),
-	"sqs":            sqs.New(),
-	"ssm":            ssm.New(),
 	"temporal":       temporal.Driver{},
 	"valkey":         valkey.Driver{},
 }
