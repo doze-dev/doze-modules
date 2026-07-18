@@ -3,8 +3,8 @@ module github.com/doze-dev/doze-modules
 go 1.26.0
 
 require (
-	github.com/doze-dev/doze-aws v0.2.0
-	github.com/doze-dev/doze-kafka v1.1.0
+	github.com/doze-dev/doze-aws v0.3.0
+	github.com/doze-dev/doze-kafka v1.2.0
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/twmb/franz-go v1.21.5
 	github.com/twmb/franz-go/pkg/kadm v1.18.0

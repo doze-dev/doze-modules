@@ -48,6 +48,8 @@ github.com/aws/aws-sdk-go-v2/service/sqs v1.45.0 h1:k1aaG71RTEqSWNy1LWkKtSRT2G36
 github.com/aws/aws-sdk-go-v2/service/sqs v1.45.0/go.mod h1:JISE0m3JPVhirZEVIAUyK4C62n87tU4BZmUa9Ozc2to=
 github.com/aws/aws-sdk-go-v2/service/ssm v1.71.0 h1:Z5oWeBPXlKfYMctLgbnD0bXbhuqpxsV/KnZpsLLEMLQ=
 github.com/aws/aws-sdk-go-v2/service/ssm v1.71.0/go.mod h1:xabzRvdbMs3FG9kU5M6RUOuCW6wXDkpdIqoXXNzA1nQ=
+github.com/aws/aws-sdk-go-v2/service/sts v1.44.0 h1:bLZ0PolJ8J+HkJHztcXORUpHXBye2U8298lCEMi6ZCU=
+github.com/aws/aws-sdk-go-v2/service/sts v1.44.0/go.mod h1:9gdl4RrflIdpDb2TlXshWgR1F9TeCkvqDx77Vpr4Z/Q=
 github.com/aws/smithy-go v1.27.3 h1:F3Zb497UhhskkfpJmfkXswyo+t0sh9OTBnIHjogWbVY=
 github.com/aws/smithy-go v1.27.3/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
 github.com/bufbuild/protocompile v0.14.1 h1:iA73zAf/fyljNjQKwYzUHD6AD4R8KMasmwa/FBatYVw=
@@ -58,12 +60,10 @@ github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/doze-dev/doze-aws v0.2.0 h1:HsqMGQJaN7Dg7fbiUd58V8CYiorLiDT1oVQ7XaOA2UI=
-github.com/doze-dev/doze-aws v0.2.0/go.mod h1:Cemr6nn9h7OIMnqYPgUKh+abJG6/jju5Q8T3/Sx0frg=
-github.com/doze-dev/doze-kafka v1.1.0 h1:4r1hnIDyqfH3tsCwUUKcDZFE3JLIm4nnsOsQGrcrl10=
-github.com/doze-dev/doze-kafka v1.1.0/go.mod h1:fg3pMjoFrxtBHquP1gykoBKiQ99URhlYiLPZvHhbtew=
-github.com/doze-dev/doze-sdk v0.5.1-0.20260717212711-bec5d3ee707b h1:LFcmaDj68wGGdjRm6GNE+cxk+M/soEH87iXth/O1pPY=
-github.com/doze-dev/doze-sdk v0.5.1-0.20260717212711-bec5d3ee707b/go.mod h1:6QyR7o4Xe90fLxYfUzpfT4x/Wtg6LtDnNfuihsEdtfw=
+github.com/doze-dev/doze-aws v0.3.0 h1:c39tB+3kaL+5xKsHWwaVR1VznPgIWbxuaL6Y9zu8Rw8=
+github.com/doze-dev/doze-aws v0.3.0/go.mod h1:Cemr6nn9h7OIMnqYPgUKh+abJG6/jju5Q8T3/Sx0frg=
+github.com/doze-dev/doze-kafka v1.2.0 h1:/zWwHIxbuUAIRZxIqJAwuHfPeBiq7bh21stR9rheDiA=
+github.com/doze-dev/doze-kafka v1.2.0/go.mod h1:fg3pMjoFrxtBHquP1gykoBKiQ99URhlYiLPZvHhbtew=
 github.com/doze-dev/doze-sdk v0.6.0 h1:G8iZ2WYrDU0gC4KwzADXb41Wq1k9197sAhX4MmBN6TQ=
 github.com/doze-dev/doze-sdk v0.6.0/go.mod h1:6QyR7o4Xe90fLxYfUzpfT4x/Wtg6LtDnNfuihsEdtfw=
 github.com/eapache/go-resiliency v1.7.0 h1:n3NRTnBn5N0Cbi/IeOHuQn9s2UwVUH7Ga0ZWcP+9JTA=
