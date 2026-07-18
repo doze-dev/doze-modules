@@ -10,6 +10,7 @@ package kafka
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -73,6 +74,14 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 	args := []string{"__serve", "--socket", socket, "--datadir", inst.DataDir, "--version", version}
 	if advertise != "" {
 		args = append(args, "--advertise", advertise)
+		// The web console rides the same per-instance IP one port up (the
+		// broker's own port speaks the Kafka wire protocol, which can't share
+		// with HTTP) — http://<host>:<port+1> is the convention the dash links.
+		if host, port, err := net.SplitHostPort(advertise); err == nil {
+			if p, perr := strconv.Atoi(port); perr == nil {
+				args = append(args, "--console-addr", net.JoinHostPort(host, strconv.Itoa(p+1)))
+			}
+		}
 	}
 	if cfg, ok := inst.Spec.(*Config); ok && cfg != nil {
 		if cfg.AutoCreateTopics != nil {

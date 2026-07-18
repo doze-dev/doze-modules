@@ -5,11 +5,13 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 
+	"github.com/doze-dev/doze-kafka/console"
 	"github.com/doze-dev/doze-kafka/server"
 )
 
@@ -22,6 +24,7 @@ func ServeFromArgs(argv []string) error {
 	datadir := fs.String("datadir", "", "data directory")
 	version := fs.String("version", "4", "Kafka protocol profile (1-4)")
 	advertise := fs.String("advertise", "", "advertised host:port for Metadata")
+	consoleAddr := fs.String("console-addr", "", "host:port for the web console ('' = off)")
 	autoCreate := fs.String("auto-create", "", "auto-create topics (true/false)")
 	defaultParts := fs.Int("default-partitions", 0, "partitions for auto-created topics")
 	retentionMs := fs.Int64("retention-ms", 0, "retention in ms")
@@ -71,6 +74,30 @@ func ServeFromArgs(argv []string) error {
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
+
+	// The web console, on its own HTTP port (Kafka's wire protocol can't share
+	// one). It dials the broker's unix socket directly — through the doze proxy
+	// its idle client would count as a live connection and pin the instance
+	// awake forever. Console failure never takes the broker down.
+	if *consoleAddr != "" {
+		con, err := console.New(console.Options{Addr: "unix://" + *socket, DisplayAddr: *advertise})
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "kafka console: %v\n", err)
+		} else {
+			httpSrv := &http.Server{Addr: *consoleAddr, Handler: con}
+			go func() {
+				if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+					fmt.Fprintf(os.Stderr, "kafka console: %v\n", err)
+				}
+			}()
+			go func() {
+				<-ctx.Done()
+				httpSrv.Close()
+				con.Close()
+			}()
+		}
+	}
+
 	// ServeListener opens storage before accepting, so an accepting socket
 	// means ready — which is exactly the Ready{socket} gate the driver sets.
 	return srv.ServeListener(ctx, ln)
