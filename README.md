@@ -120,3 +120,7 @@ go build -o /tmp/dzm ./cmd/dzm
 /tmp/dzm readme                                  # refresh the module table above
 DOZE_MODULES_MIRROR=file://$PWD/dist doze up      # point doze at it
 ```
+
+## License
+
+Apache 2.0 — see [LICENSE](LICENSE).
