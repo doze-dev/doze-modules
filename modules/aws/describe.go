@@ -9,7 +9,7 @@ func (Driver) Describe() engine.Description {
 		Title:        "AWS",
 		Tagline:      "The whole local AWS as ONE service — with its web console.",
 		Category:     "cloud",
-		Description:  "Every doze-aws service — S3, SQS, SNS, DynamoDB, Lambda, EventBridge, KMS, SSM, Secrets Manager, STS — behind one gateway on one endpoint, as one doze instance. Declare buckets, queues, topics, tables, functions, rules, keys, secrets and parameters as nested blocks (the same shape as doze-aws's stack.yaml); doze converges them on boot. A stock SDK or the aws CLI points AWS_ENDPOINT_URL at the one endpoint; the web console at /_console manages everything, with the live Flows graph and a Traffic tail capturing every call. One process, no Docker, no JVM, no LocalStack.",
+		Description:  "Every doze-aws service — S3, SQS, SNS, DynamoDB, Lambda, EventBridge, Step Functions, Kinesis, API Gateway, CloudFormation, IAM, KMS, SSM, Secrets Manager, STS — behind one gateway on one endpoint, as one doze instance. Declare buckets, queues, topics, tables, functions, rules, keys, secrets, parameters and state machines as nested blocks (the same resource graph doze-aws compiles a CloudFormation template down to); doze converges them on boot. A stock SDK or the aws CLI points AWS_ENDPOINT_URL at the one endpoint; the web console at /_console manages everything, with the live Flows graph and a Traffic tail capturing every call. One process, no Docker, no JVM, no LocalStack.",
 		Port:         4566,
 		Source:       "doze/aws",
 		Homepage:     "https://github.com/doze-dev/doze-modules/tree/main/modules/aws",
@@ -43,6 +43,28 @@ func (Driver) Describe() engine.Description {
   key "app_key" {}
   secret "db_password" { value = "s3cr3t" }
   parameter "/app/feature/banner" { value = "hello" }
+
+  state_machine "order_flow" {
+    definition = <<-ASL
+      {
+        "StartAt": "Resize",
+        "States": {
+          "Resize": {
+            "Type": "Task",
+            "Resource": "arn:aws:lambda:us-east-1:000000000000:function:resize",
+            "Retry": [{"ErrorEquals": ["States.TaskFailed"], "MaxAttempts": 2}],
+            "Next": "Notify"
+          },
+          "Notify": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::sqs:sendMessage",
+            "Parameters": {"QueueUrl": "http://localhost:4566/000000000000/emails", "MessageBody.$": "$"},
+            "End": true
+          }
+        }
+      }
+    ASL
+  }
 }`,
 		Blocks: []engine.ConfigBlock{
 			{Name: "bucket", Desc: "One S3 bucket (the label is the bucket name).", Args: []engine.ConfigArg{
@@ -61,6 +83,11 @@ func (Driver) Describe() engine.Description {
 			{Name: "key", Desc: "One KMS key with real local crypto."},
 			{Name: "secret", Desc: "One Secrets Manager secret (never stomped without force)."},
 			{Name: "parameter", Desc: "One SSM parameter (the label is the full /path)."},
+			{Name: "state_machine", Desc: "One Step Functions state machine, run locally against the stack's functions, queues and topics.", Args: []engine.ConfigArg{
+				{Name: "definition", Type: "string", Required: true, Desc: "The States Language document — a heredoc, or file(\"./flow.asl.json\")."},
+				{Name: "role", Type: "string", Desc: "Role ARN; the API requires one and nothing local evaluates it, so it defaults."},
+				{Name: "type", Type: "string", Default: "STANDARD", Desc: "STANDARD or EXPRESS (Express executions arrive after Standard ones)."},
+			}},
 		},
 	}
 }

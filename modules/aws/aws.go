@@ -11,6 +11,7 @@
 //	  table  "sessions" { key = "session_id:S" }
 //	  function "resize" { code = "./fn" }
 //	  rule "orders" { pattern = "{\"source\":[\"shop\"]}"  targets = ["lambda:resize"] }
+//	  state_machine "order_flow" { definition = file("./order_flow.asl.json") }
 //	}
 package aws
 

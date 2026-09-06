@@ -6,14 +6,14 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/doze-dev/doze-aws/stackfile"
+	"github.com/doze-dev/doze-aws/provision"
 
 	"github.com/doze-dev/doze-modules/awslocal"
 	"github.com/doze-dev/doze-sdk/engine"
 )
 
 // Converge implements engine.Converger: hand the declared stack to doze-aws's
-// own convergence (stackfile.Apply — the same engine `doze-aws apply` uses),
+// own convergence (provision.Apply — the same engine `doze-aws apply` uses),
 // speaking real wire protocols against the running instance. Idempotent, and
 // it never stomps live secret/parameter values without force.
 func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolchain, ep engine.Endpoint) error {
@@ -22,14 +22,14 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolc
 		return nil
 	}
 	gw := clientHandler{c: awslocal.UnixHTTPClient(ep.Backend)}
-	if _, err := stackfile.Apply(ctx, gw, cfg.Stack); err != nil {
+	if _, err := provision.Apply(ctx, gw, cfg.Stack); err != nil {
 		return fmt.Errorf("converging aws stack: %w", err)
 	}
 	return nil
 }
 
 // clientHandler adapts the instance's backend socket to the http.Handler
-// stackfile.Apply drives, so convergence goes through the same gateway the
+// provision.Apply drives, so convergence goes through the same gateway the
 // SDKs use.
 type clientHandler struct{ c *http.Client }
 
