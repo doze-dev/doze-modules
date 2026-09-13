@@ -24,7 +24,10 @@ func serveFactory(datadir string) (http.Handler, io.Closer, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	rec := console.NewRecorder(stack.Handler())
+	// The recorder needs the SAME identity the stack mints with: it classifies
+	// a queue URL by its account prefix, so a mismatch quietly labels SQS
+	// traffic as S3. Asked for rather than restated, so the two cannot drift.
+	rec := console.NewRecorder(stack.Handler(), stack.Identity())
 	con, err := console.New(console.Options{
 		Peers:    peers.InProcess(stack.Service),
 		Recorder: rec,

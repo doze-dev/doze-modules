@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/doze-dev/doze-aws/awsident"
 	"github.com/doze-dev/doze-aws/provision"
 
 	"github.com/doze-dev/doze-modules/awslocal"
@@ -22,7 +23,16 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolc
 		return nil
 	}
 	gw := clientHandler{c: awslocal.UnixHTTPClient(ep.Backend)}
-	if _, err := provision.Apply(ctx, gw, cfg.Stack); err != nil {
+	// The identity provision.Apply mints ARNs with — integration URIs, activity
+	// ARNs — which are then SENT to the instance, so it has to be the identity
+	// that instance runs under.
+	//
+	// awsident.Default() is not a guess here: serveFactory builds this module's
+	// stack with a zero-value StackConfig.Identity, which resolves to exactly
+	// this, and there is no way to configure otherwise. If the module ever
+	// gains a configurable region or account, this and serve.go change together
+	// — which is why serve.go asks the stack rather than restating a constant.
+	if _, err := provision.Apply(ctx, gw, cfg.Stack, awsident.Default()); err != nil {
 		return fmt.Errorf("converging aws stack: %w", err)
 	}
 	return nil
