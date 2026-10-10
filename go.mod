@@ -3,22 +3,17 @@ module github.com/doze-dev/doze-modules
 go 1.27.0
 
 require (
-	github.com/doze-dev/doze-aws v0.3.0
-	github.com/doze-dev/doze-kafka v1.2.0
 	github.com/doze-dev/doze-sdk v0.7.1-0.20261010144935-0d68bd5db525
 	github.com/hashicorp/hcl/v2 v2.24.0
-	github.com/twmb/franz-go v1.21.5
-	github.com/twmb/franz-go/pkg/kadm v1.18.0
 	github.com/zclconf/go-cty v1.18.1
 	go.mongodb.org/mongo-driver v1.17.9
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
-	github.com/BurntSushi/toml v1.6.0 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
-	github.com/blues/jsonata-go v1.5.4 // indirect
+	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
@@ -32,13 +27,14 @@ require (
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/oklog/run v1.1.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.27 // indirect
-	github.com/twmb/franz-go/pkg/kmsg v1.13.1 // indirect
+	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
+	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.1.2 // indirect
 	github.com/xdg-go/stringprep v1.0.4 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 // indirect
-	go.etcd.io/bbolt v1.5.0 // indirect
+	go.opentelemetry.io/otel v1.44.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.44.0 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.59.0 // indirect
@@ -51,8 +47,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-// Until doze-aws tags v0.4.0 (the first release with the public provision
-// package): build against the sibling checkout. Once the tag exists, drop
-// this line, set the require above to v0.4.0, and `go mod tidy` — the
-// -trimpath build inputs should come from a tag, not a path (see modules.yaml).
-replace github.com/doze-dev/doze-aws => ../doze-aws

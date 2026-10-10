@@ -15,6 +15,9 @@
 #   aarch64-apple-darwin,
 #   aarch64-unknown-linux-gnu, x86_64-unknown-linux-gnu
 #
+# The kafka and aws modules are not here: they embed doze-kafka and doze-aws, so they
+# are built and released from those repos (module/), with the same registry publish.
+#
 # NOTE: `process` is NOT a module — it is the supervision primitive compiled into
 # doze core, so it never appears here.
 
@@ -36,17 +39,3 @@ modules:
   # any-dot-is-exact rule made 0.2.1 look up a "1.1" artifact and 404 on every
   # toolchain resolve (the module was unbootable since release).
   temporal:   { path: ./modules/temporal/plugin,   version: "0.2.2" }
-  # JVM-free single-node Kafka-protocol broker (embeds doze-kafka).
-  # 0.1.1: embeds the doze-kafka web console (broker port+1 on the instance IP)
-  # and Admin resources for the dash (topics w/ high-water + per-partition
-  # offsets, groups w/ lag) — doze-kafka v1.2.0.
-  kafka:          { path: ./modules/kafka/plugin,          version: "0.1.1" }
-  # THE local AWS: the whole doze-aws stack (fifteen services + web console +
-  # traffic recorder) as ONE instance — one block, one process, one endpoint.
-  # 0.1.1: glance API for the doze dash (service board + attention + wire) and
-  # path-prefix-aware SQS URLs — doze-aws v0.3.0.
-  # 0.1.2: the state_machine block (Step Functions), and the move from the
-  # deleted stackfile package to doze-aws's public provision graph, which
-  # also brings Kinesis, IAM, CloudFormation and API Gateway into the stack —
-  # doze-aws v0.4.0.
-  aws:            { path: ./modules/aws/plugin,            version: "0.1.2" }

@@ -9,9 +9,7 @@ import (
 	"github.com/doze-dev/doze-sdk/engine"
 	"github.com/doze-dev/doze-sdk/modtool"
 
-	awsmod "github.com/doze-dev/doze-modules/modules/aws"
 	"github.com/doze-dev/doze-modules/modules/ferret"
-	"github.com/doze-dev/doze-modules/modules/kafka"
 	"github.com/doze-dev/doze-modules/modules/kvrocks"
 	"github.com/doze-dev/doze-modules/modules/mariadb"
 	"github.com/doze-dev/doze-modules/modules/postgres"
@@ -27,9 +25,7 @@ import (
 // resolves. Coverage is mandatory: dzm (build) and dzm meta both fail on a
 // modules.yaml entry with no describer.
 var describers = map[string]engine.Describer{
-	"aws":            awsmod.New(),
 	"ferret":         ferret.Driver{},
-	"kafka":          kafka.New(),
 	"kvrocks":        kvrocks.Driver{},
 	"mariadb":        mariadb.Driver{},
 	"postgres":       postgres.Driver{},
