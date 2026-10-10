@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/twmb/franz-go/pkg/kadm"
+	"github.com/twmb/franz-go/pkg/kgo"
 
 	"github.com/doze-dev/doze-sdk/engine"
 )
@@ -89,12 +90,28 @@ func (Driver) Resources(ctx context.Context, _ engine.Instance, ep engine.Endpoi
 	return out, nil
 }
 
-// Actions implements engine.Admin: none — consume with any Kafka client.
-func (Driver) Actions() []engine.Action { return nil }
+// Actions implements engine.Admin: one — put a message on a topic, which is
+// the thing a person reaches for a console to do.
+func (Driver) Actions() []engine.Action {
+	return []engine.Action{{ID: "produce", Label: "Produce a message", Kind: "topic", InputHint: "message value"}}
+}
 
 // Run implements engine.Admin.
-func (Driver) Run(context.Context, engine.Instance, engine.Endpoint, string, string, string) (string, error) {
-	return "", fmt.Errorf("kafka: consume with a Kafka client (kcat -b $KAFKA_BROKERS -t <topic> -C)")
+func (Driver) Run(ctx context.Context, _ engine.Instance, ep engine.Endpoint, action, resource, input string) (string, error) {
+	if action != "produce" {
+		return "", fmt.Errorf("kafka: no action called %q", action)
+	}
+	cl, err := unixClient(ep.Backend)
+	if err != nil {
+		return "", err
+	}
+	defer cl.Close()
+	res := cl.ProduceSync(ctx, &kgo.Record{Topic: resource, Value: []byte(input)})
+	if err := res.FirstErr(); err != nil {
+		return "", err
+	}
+	r, _ := res.First()
+	return fmt.Sprintf("produced to %s, partition %d offset %d", resource, r.Partition, r.Offset), nil
 }
 
 func pluralS(n int) string {

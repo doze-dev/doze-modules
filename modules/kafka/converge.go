@@ -57,14 +57,14 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolc
 
 // unixClient dials the broker's backend unix socket regardless of the seed
 // address (single broker — redirecting every dial to the socket is safe).
-func unixClient(socket string) (*kgo.Client, error) {
-	return kgo.NewClient(
+func unixClient(socket string, opts ...kgo.Opt) (*kgo.Client, error) {
+	return kgo.NewClient(append([]kgo.Opt{
 		kgo.SeedBrokers("kafka.local:9092"),
 		kgo.Dialer(func(ctx context.Context, _, _ string) (net.Conn, error) {
 			var d net.Dialer
 			return d.DialContext(ctx, "unix", socket)
 		}),
-	)
+	}, opts...)...)
 }
 
 // CheckHealth implements engine.HealthChecker: an ApiVersions ping over the
