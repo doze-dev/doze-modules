@@ -3,7 +3,7 @@ module github.com/doze-dev/doze-modules
 go 1.27.0
 
 require (
-	github.com/doze-dev/doze-sdk v0.7.1-0.20261010144935-0d68bd5db525
+	github.com/doze-dev/doze-sdk v0.7.1-0.20261011115536-2a1c39a9ce8a
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/zclconf/go-cty v1.18.1
 	go.mongodb.org/mongo-driver v1.17.9
@@ -46,4 +46,3 @@ require (
 	google.golang.org/grpc v1.82.0 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
-
