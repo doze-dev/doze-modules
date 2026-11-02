@@ -33,7 +33,7 @@ modules:
   # 0.2.2: readiness probe passes -U postgres, so backend logs stop collecting
   # a `FATAL: role "<os-user>" does not exist` on every boot/health poll.
   postgres:   { path: ./modules/postgres/plugin,   version: "0.2.3" }
-  ferret:     { path: ./modules/ferret/plugin,     version: "0.2.2" }
+  ferret:     { path: ./modules/ferret/plugin,     version: "0.2.3" }
   mariadb:    { path: ./modules/mariadb/plugin,    version: "0.2.1" }
   # temporal 0.2.2: a declared "1.1" resolves via the mirror's major map — the
   # any-dot-is-exact rule made 0.2.1 look up a "1.1" artifact and 404 on every

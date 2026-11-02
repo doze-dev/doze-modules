@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
+	"net"
 	"os"
 	"sort"
 	"strings"
@@ -64,14 +64,21 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolc
 	return nil
 }
 
-// connectMongo dials FerretDB over the instance's unix socket. A Mongo URI
-// carries a unix socket as a percent-encoded host with no port.
+// connectMongo dials FerretDB over the instance's unix socket.
+//
+// The socket is not put in the URI: the Mongo driver treats a percent-encoded
+// socket path as a hostname and lowercases it, so a path under /Users (every
+// Mac) names a socket that does not exist. A fixed placeholder host goes in the
+// URI instead, and the dialer connects to the real path.
 func connectMongo(ctx context.Context, inst engine.Instance) (*mongo.Client, error) {
 	sock := BackendSocketPath(inst.SocketDir)
-	uri := "mongodb://" + url.QueryEscape(sock)
 	dialCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	client, err := mongo.Connect(dialCtx, options.Client().ApplyURI(uri))
+	opts := options.Client().
+		ApplyURI("mongodb://ferret.sock/").
+		SetDirect(true).
+		SetDialer(socketDialer{path: sock})
+	client, err := mongo.Connect(dialCtx, opts)
 	if err != nil {
 		return nil, fmt.Errorf("connecting to ferret at %s: %w", sock, err)
 	}
@@ -80,6 +87,15 @@ func connectMongo(ctx context.Context, inst engine.Instance) (*mongo.Client, err
 		return nil, fmt.Errorf("pinging ferret at %s: %w", sock, err)
 	}
 	return client, nil
+}
+
+// socketDialer connects every driver dial to one unix socket, whatever
+// address the driver asks for.
+type socketDialer struct{ path string }
+
+func (d socketDialer) DialContext(ctx context.Context, _, _ string) (net.Conn, error) {
+	var nd net.Dialer
+	return nd.DialContext(ctx, "unix", d.path)
 }
 
 // convergeUsers creates/updates declared Mongo users when Auth is on. SCAFFOLD:
