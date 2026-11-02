@@ -14,7 +14,6 @@ package ferret
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -22,7 +21,6 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
 
 	"github.com/doze-dev/doze-sdk/enginetest"
 )
@@ -36,10 +34,9 @@ func ferretVersion() string {
 
 func mongoClient(t *testing.T, b *enginetest.Backend) *mongo.Client {
 	t.Helper()
-	uri := "mongodb://" + url.QueryEscape(BackendSocketPath(b.SocketDir()))
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	c, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+	c, err := mongo.Connect(ctx, mongoOptions(BackendSocketPath(b.SocketDir())))
 	if err != nil {
 		t.Fatalf("mongo connect: %v", err)
 	}

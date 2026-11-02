@@ -11,6 +11,10 @@
 # These are the same artifacts users download, so acceptance tests what users
 # run. Building backends from source is doze-binaries' job, not this repo's.
 set -euo pipefail
+# Errors inside $(...) must stop the script too; a backend that failed to fetch
+# would otherwise leave an empty BINDIR, and the acceptance tests skip (pass)
+# when theirs is empty.
+shopt -s inherit_errexit 2>/dev/null || true # bash 4.4+; the checks below do not rely on it
 
 module=${1:?usage: backend-env.sh <module> [triple]}
 triple=${2:-x86_64-unknown-linux-gnu}
@@ -37,25 +41,41 @@ fetch() {
   fi
   mkdir -p "$work/x-$recipe"
   curl -sfL --retry 3 --retry-all-errors "$url" | tar -xz -C "$work/x-$recipe"
-  find "$work/x-$recipe" -maxdepth 3 -type d -name bin | head -1
+  local bin
+  bin=$(find "$work/x-$recipe" -maxdepth 3 -type d -name bin | head -1)
+  if [ -z "$bin" ]; then
+    echo "::error::the $recipe archive has no bin directory" >&2
+    return 1
+  fi
+  echo "$bin"
+}
+
+# bindir <recipe> [major] fetches, and stops the script if nothing came back.
+# It is assigned before it is printed: a failure inside echo "X=$(...)" would
+# not stop the script, because echo itself succeeds.
+bindir() {
+  local dir
+  dir=$(fetch "$@")
+  [ -n "$dir" ] && [ -d "$dir" ] || { echo "::error::no backend for $1" >&2; exit 1; }
+  echo "$dir"
 }
 
 case "$module" in
   postgres)
-    echo "DOZE_POSTGRES_BINDIR=$(fetch postgres 16)"
+    d=$(bindir postgres 16); echo "DOZE_POSTGRES_BINDIR=$d"
     echo "DOZE_POSTGRES_VERSION=16" ;;
   valkey)
-    echo "DOZE_VALKEY_BINDIR=$(fetch valkey)" ;;
+    d=$(bindir valkey); echo "DOZE_VALKEY_BINDIR=$d" ;;
   kvrocks)
-    echo "DOZE_KVROCKS_BINDIR=$(fetch kvrocks)" ;;
+    d=$(bindir kvrocks); echo "DOZE_KVROCKS_BINDIR=$d" ;;
   ferret)
-    echo "DOZE_FERRET_BINDIR=$(fetch ferretdb)"
-    echo "DOZE_DOCUMENTDB_BINDIR=$(fetch documentdb)" ;;
+    d=$(bindir ferretdb); echo "DOZE_FERRET_BINDIR=$d"
+    d=$(bindir documentdb); echo "DOZE_DOCUMENTDB_BINDIR=$d" ;;
   mariadb)
-    echo "DOZE_MARIADB_BINDIR=$(fetch mariadb 11.4)"
+    d=$(bindir mariadb 11.4); echo "DOZE_MARIADB_BINDIR=$d"
     echo "DOZE_MARIADB_VERSION=11.4" ;;
   temporal)
-    echo "DOZE_TEMPORAL_BINDIR=$(fetch temporal 1.1)"
+    d=$(bindir temporal 1.1); echo "DOZE_TEMPORAL_BINDIR=$d"
     echo "DOZE_TEMPORAL_VERSION=1.1" ;;
   *)
     echo "::error::module '$module' has no backend mapping in scripts/backend-env.sh — add one" >&2

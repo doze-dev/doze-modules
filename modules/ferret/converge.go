@@ -64,21 +64,26 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, _ engine.Toolc
 	return nil
 }
 
-// connectMongo dials FerretDB over the instance's unix socket.
+// mongoOptions are the client options for FerretDB on the unix socket sock.
 //
 // The socket is not put in the URI: the Mongo driver treats a percent-encoded
-// socket path as a hostname and lowercases it, so a path under /Users (every
-// Mac) names a socket that does not exist. A fixed placeholder host goes in the
-// URI instead, and the dialer connects to the real path.
+// socket path as a hostname and lowercases it, so on a case-sensitive
+// filesystem (Linux) a path with a capital letter names a socket that does not
+// exist. A fixed placeholder host goes in the URI, and the dialer connects to
+// the real path.
+func mongoOptions(sock string) *options.ClientOptions {
+	return options.Client().
+		ApplyURI("mongodb://ferret.sock/").
+		SetDirect(true).
+		SetDialer(socketDialer{path: sock})
+}
+
+// connectMongo dials FerretDB over the instance's unix socket.
 func connectMongo(ctx context.Context, inst engine.Instance) (*mongo.Client, error) {
 	sock := BackendSocketPath(inst.SocketDir)
 	dialCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	opts := options.Client().
-		ApplyURI("mongodb://ferret.sock/").
-		SetDirect(true).
-		SetDialer(socketDialer{path: sock})
-	client, err := mongo.Connect(dialCtx, opts)
+	client, err := mongo.Connect(dialCtx, mongoOptions(sock))
 	if err != nil {
 		return nil, fmt.Errorf("connecting to ferret at %s: %w", sock, err)
 	}
