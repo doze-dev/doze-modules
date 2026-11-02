@@ -85,48 +85,7 @@ jobs:
       - uses: actions/setup-go@v5
         with: { go-version-file: go.mod }
       - name: Fetch prebuilt backend(s)
-        run: |
-          triple=x86_64-unknown-linux-gnu
-          fetch() { # <recipe> [major] -> prints the bin dir (the BINDIR contract)
-            local recipe=$1 major=${2:-} idx="/tmp/$1-index.yaml" full url
-            if ! curl -sfL "https://github.com/doze-dev/doze-binaries/releases/download/$recipe/index.yaml" -o "$idx"; then
-              echo "::error::no prebuilt $recipe backend in doze-binaries — users cannot boot this module; publish the backend before releasing" >&2
-              return 1
-            fi
-            if [ -n "$major" ]; then
-              full=$(yq ".engines.$recipe.versions.\"$major\"" "$idx")
-            else
-              full=$(yq ".engines.$recipe.versions | to_entries | .[-1].value" "$idx")
-            fi
-            url=$(yq ".engines.$recipe.artifacts.\"$full\".\"$triple\".url" "$idx")
-            [ "$url" != "null" ] || { echo "::error::no $triple artifact for $recipe $full" >&2; return 1; }
-            mkdir -p "/tmp/x-$recipe"
-            curl -sfL "$url" | tar -xz -C "/tmp/x-$recipe"
-            find "/tmp/x-$recipe" -maxdepth 3 -type d -name bin | head -1
-          }
-          case "${{ matrix.module }}" in
-            postgres)
-              dir=$(fetch postgres 16)
-              { echo "DOZE_POSTGRES_BINDIR=$dir"; echo "DOZE_POSTGRES_VERSION=16"; } >> "$GITHUB_ENV" ;;
-            valkey)
-              dir=$(fetch valkey)
-              echo "DOZE_VALKEY_BINDIR=$dir" >> "$GITHUB_ENV" ;;
-            kvrocks)
-              dir=$(fetch kvrocks)
-              echo "DOZE_KVROCKS_BINDIR=$dir" >> "$GITHUB_ENV" ;;
-            ferret)
-              fdir=$(fetch ferretdb); ddir=$(fetch documentdb)
-              { echo "DOZE_FERRET_BINDIR=$fdir"; echo "DOZE_DOCUMENTDB_BINDIR=$ddir"; } >> "$GITHUB_ENV" ;;
-            mariadb)
-              dir=$(fetch mariadb 11.4)
-              { echo "DOZE_MARIADB_BINDIR=$dir"; echo "DOZE_MARIADB_VERSION=11.4"; } >> "$GITHUB_ENV" ;;
-            temporal)
-              dir=$(fetch temporal 1.1)
-              { echo "DOZE_TEMPORAL_BINDIR=$dir"; echo "DOZE_TEMPORAL_VERSION=1.1"; } >> "$GITHUB_ENV" ;;
-            *)
-              echo "::error::module '${{ matrix.module }}' has no backend mapping in release.yml — add one" >&2
-              exit 1 ;;
-          esac
+        run: scripts/backend-env.sh ${{ matrix.module }} >> "$GITHUB_ENV"
       - name: Run acceptance
         run: go test -tags acceptance -v -timeout 20m ./modules/${{ matrix.module }}/...
 
@@ -151,8 +110,18 @@ jobs:
           go build -o /tmp/dzm ./cmd/dzm
           for name in $(/tmp/dzm versions | jq -r 'keys[]'); do
             mkdir -p "dist/$name"
-            curl -sfL "https://github.com/${{ github.repository }}/releases/download/$name/index.yaml" \
-              -o "dist/$name/index.yaml" || rm -f "dist/$name/index.yaml"
+            # A module that was never published has no index (404): start fresh.
+            # Any other failure must stop the release, or the new index would be
+            # written without the older releases that pinned lockfiles need.
+            code=$(curl -sL --retry 3 --retry-all-errors -w "%{http_code}" \
+              "https://github.com/${{ github.repository }}/releases/download/$name/index.yaml" \
+              -o "dist/$name/index.yaml")
+            if [ "$code" = 404 ]; then
+              rm -f "dist/$name/index.yaml"
+            elif [ "$code" != 200 ]; then
+              echo "::error::could not fetch the published index for $name (HTTP $code); refusing to publish one that would drop its older releases" >&2
+              exit 1
+            fi
           done
           /tmp/dzm --repo "$PWD" --out dist --module "${{ inputs.module || 'all' }}"
 
