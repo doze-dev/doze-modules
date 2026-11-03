@@ -24,18 +24,22 @@
 # Patch bump across the board: doze-sdk moved from a local replace to the
 # tagged v0.3.0, which changes -trimpath build inputs — published (version,
 # triple) artifacts are immutable, so new bytes mean new versions.
+# Patch bump across the board (doze-sdk v0.10.0): modules download engine
+# binaries through doze instead of carrying their own downloader. They need a
+# doze from 2026-11-03 on; an older one says "upgrade doze" when a download is
+# needed.
 modules:
-  valkey:     { path: ./modules/valkey/plugin,     version: "0.2.1" }
-  kvrocks:    { path: ./modules/kvrocks/plugin,    version: "0.2.1" }
+  valkey:     { path: ./modules/valkey/plugin,     version: "0.2.2" }
+  kvrocks:    { path: ./modules/kvrocks/plugin,    version: "0.2.2" }
   # postgres 0.2.3: role convergence is two-pass (create all, then memberships)
   # so declaration order can't break member_of; the published Example is fixed
   # (grant takes no label) and is now converged by acceptance before release.
   # 0.2.2: readiness probe passes -U postgres, so backend logs stop collecting
   # a `FATAL: role "<os-user>" does not exist` on every boot/health poll.
-  postgres:   { path: ./modules/postgres/plugin,   version: "0.2.4" }
-  ferret:     { path: ./modules/ferret/plugin,     version: "0.2.3" }
-  mariadb:    { path: ./modules/mariadb/plugin,    version: "0.2.1" }
+  postgres:   { path: ./modules/postgres/plugin,   version: "0.2.5" }
+  ferret:     { path: ./modules/ferret/plugin,     version: "0.2.4" }
+  mariadb:    { path: ./modules/mariadb/plugin,    version: "0.2.2" }
   # temporal 0.2.2: a declared "1.1" resolves via the mirror's major map — the
   # any-dot-is-exact rule made 0.2.1 look up a "1.1" artifact and 404 on every
   # toolchain resolve (the module was unbootable since release).
-  temporal:   { path: ./modules/temporal/plugin,   version: "0.2.2" }
+  temporal:   { path: ./modules/temporal/plugin,   version: "0.2.3" }

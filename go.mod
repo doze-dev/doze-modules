@@ -3,7 +3,7 @@ module github.com/doze-dev/doze-modules
 go 1.27.0
 
 require (
-	github.com/doze-dev/doze-sdk v0.8.0
+	github.com/doze-dev/doze-sdk v0.10.0
 	github.com/hashicorp/hcl/v2 v2.24.0
 	github.com/zclconf/go-cty v1.18.1
 	go.mongodb.org/mongo-driver v1.17.9
