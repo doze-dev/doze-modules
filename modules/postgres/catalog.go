@@ -58,7 +58,9 @@ type CatalogEntry struct {
 var pg14to18 = []int{14, 15, 16, 17, 18}
 
 // catalog lists waves 1 and 2 of the design. Version lines must be keys in the
-// mirror index doze-binaries publishes (two-part, major_parts: 2).
+// mirror index doze-binaries publishes (two-part, major_parts: 2). Wave 1's
+// match doze-binaries' versions.yaml as of 2026-11-07; wave 2's (and the h3,
+// pgrouting and age keys) are not built yet and must be checked when they are.
 var catalog = []CatalogEntry{
 	// ── wave 1 ──
 	{Name: "vector", Aliases: []string{"pgvector"}, Wave: 1, Description: "Vector similarity search (HNSW, IVFFlat) for embeddings.",
@@ -69,15 +71,15 @@ var catalog = []CatalogEntry{
 		Settings: map[string]string{"cron.database_name": "{db}", "cron.use_background_workers": "on"},
 		Homepage: "https://github.com/citusdata/pg_cron"},
 	{Name: "pg_partman", Wave: 1, Description: "Time- and serial-based partition management.",
-		License: "PostgreSQL", Line: "5.2", Majors: pg14to18, MayPreload: []string{"pg_partman_bgw"},
+		License: "PostgreSQL", Line: "5.5", Majors: pg14to18, Preload: []string{"pg_partman_bgw"},
 		Settings: map[string]string{"pg_partman_bgw.dbname": "{db}"},
 		Homepage: "https://github.com/pgpartman/pg_partman"},
 	{Name: "pgmq", Wave: 1, Description: "Lightweight message queues, like SQS, in tables.",
-		License: "PostgreSQL", Line: "1.5", Majors: pg14to18, Homepage: "https://github.com/pgmq/pgmq"},
+		License: "PostgreSQL", Line: "1.13", Majors: pg14to18, Homepage: "https://github.com/pgmq/pgmq"},
 	{Name: "hypopg", Wave: 1, Description: "Hypothetical indexes: see what an index would do without building it.",
 		License: "PostgreSQL", Line: "1.4", Majors: pg14to18, Homepage: "https://github.com/HypoPG/hypopg"},
 	{Name: "pg_hint_plan", Wave: 1, Description: "Steer the planner with hints in SQL comments.",
-		License: "BSD-3-Clause", Majors: pg14to18, MayPreload: []string{"pg_hint_plan"},
+		License: "BSD-3-Clause", Majors: pg14to18, Preload: []string{"pg_hint_plan"},
 		Lines:    map[int]string{14: "1.4", 15: "1.5", 16: "1.6", 17: "1.7", 18: "1.8"},
 		Homepage: "https://github.com/ossc-db/pg_hint_plan"},
 	{Name: "pg_repack", Wave: 1, Description: "Rebuild bloated tables and indexes online (with the pg_repack CLI).",
@@ -87,7 +89,7 @@ var catalog = []CatalogEntry{
 		Lines:    map[int]string{14: "1.6", 15: "1.7", 16: "16.1", 17: "17.1", 18: "18.0"},
 		Homepage: "https://github.com/pgaudit/pgaudit"},
 	{Name: "pg_ivm", Wave: 1, Description: "Incrementally maintained materialized views.",
-		License: "PostgreSQL", Line: "1.11", Majors: pg14to18, Preload: []string{"pg_ivm"},
+		License: "PostgreSQL", Line: "1.17", Majors: pg14to18, Preload: []string{"pg_ivm"},
 		Homepage: "https://github.com/sraoss/pg_ivm"},
 	{Name: "pg_jsonschema", Wave: 1, Description: "JSON Schema validation for json and jsonb.",
 		License: "Apache-2.0", Line: "0.3", Majors: pg14to18, Homepage: "https://github.com/supabase/pg_jsonschema"},
