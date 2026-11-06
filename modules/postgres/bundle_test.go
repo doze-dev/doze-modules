@@ -104,6 +104,11 @@ func (f *fakeFetcher) Ensure(_ context.Context, eng, full string, plat engine.Pl
 	if err := untar(data, dir); err != nil {
 		return "", "", err
 	}
+	// As doze's binaries.Manager does: an archive wrapped in one top-level
+	// folder (as doze-binaries publishes them) is read from inside it.
+	if entries, _ := os.ReadDir(dir); len(entries) == 1 && entries[0].IsDir() {
+		return filepath.Join(dir, entries[0].Name(), "bin"), digest, nil
+	}
 	return filepath.Join(dir, "bin"), digest, nil
 }
 

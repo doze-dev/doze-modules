@@ -46,7 +46,7 @@ func TestExtensionBundleE2E(t *testing.T) {
 		t.Fatalf("copying toolchain: %v\n%s", err, out)
 	}
 	t.Setenv(envBinDir, filepath.Join(tcRoot, "bin"))
-	major := strings.SplitN(filepath.Base(pgRoot), ".", 2)[0]
+	major := strings.SplitN(strings.TrimPrefix(filepath.Base(pgRoot), "postgresql-"), ".", 2)[0]
 
 	// The bundles present, oldest first: the first is what the line resolves
 	// to; a second, if any, is pinned next to check the update.
