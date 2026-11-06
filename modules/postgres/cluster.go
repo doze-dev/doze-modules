@@ -36,7 +36,8 @@ func provisioned(dataDir string) bool {
 // provision makes a data directory ready to boot: initdb if needed, verify the
 // version lock, and (re)write the tuned configuration. Idempotent.
 func provision(ctx context.Context, inst engine.Instance, tc engine.Toolchain, cfg *Config) error {
-	if !provisioned(inst.DataDir) {
+	existed := provisioned(inst.DataDir)
+	if !existed {
 		if err := initdb(ctx, inst, tc); err != nil {
 			return err
 		}
@@ -44,8 +45,13 @@ func provision(ctx context.Context, inst engine.Instance, tc engine.Toolchain, c
 	if err := checkVersion(inst); err != nil {
 		return err
 	}
-	if err := writeConf(inst.DataDir, cfg); err != nil {
+	ext := buildExtConf(cfg, tc, majorNum(inst.Version.String()), inst.Name)
+	before := preloadLine(inst.DataDir)
+	if err := writeConf(inst.DataDir, cfg, ext); err != nil {
 		return err
+	}
+	if existed {
+		notePreloadChange(inst.Name, before, preloadLine(inst.DataDir))
 	}
 	return writeHBA(inst.DataDir)
 }
@@ -97,10 +103,10 @@ func initdb(ctx context.Context, inst engine.Instance, tc engine.Toolchain) erro
 
 // writeConf writes doze's tuned settings into doze.conf, included by the main
 // postgresql.conf so we never clobber the initdb-generated file.
-func writeConf(dataDir string, cfg *Config) error {
+func writeConf(dataDir string, cfg *Config, ext extConf) error {
 	var b strings.Builder
 	b.WriteString("# Managed by doze — do not edit. Regenerated on every boot.\n")
-	for _, kv := range settings(cfg) {
+	for _, kv := range settings(cfg, ext) {
 		fmt.Fprintf(&b, "%s = %s\n", kv[0], kv[1])
 	}
 	if err := os.WriteFile(filepath.Join(dataDir, "doze.conf"), []byte(b.String()), 0o600); err != nil {
@@ -139,7 +145,7 @@ var lockedSettings = map[string]bool{
 	"data_directory":          true,
 }
 
-func settings(cfg *Config) [][2]string {
+func settings(cfg *Config, ext extConf) [][2]string {
 	onoff := func(b bool) string {
 		if b {
 			return "on"
@@ -155,10 +161,14 @@ func settings(cfg *Config) [][2]string {
 		{"synchronous_commit", onoff(cfg.Fsync)},
 		{"full_page_writes", onoff(cfg.Fsync)},
 	}
+	// What the instance's catalog extensions need: preload, their settings, and
+	// on Postgres 18 where their bundles live. A user's own preload list and
+	// paths are merged in here; their other settings still override below.
+	out = append(out, ext.confPairs(cfg.Settings)...)
 	// Raw postgresql.conf passthrough, applied after the typed tuning so it can
 	// override it. Sorted for deterministic output. Locked params are skipped.
 	for _, k := range engine.SortedKeys(cfg.Settings) {
-		if lockedSettings[strings.ToLower(k)] {
+		if lockedSettings[strings.ToLower(k)] || mergedKeys[strings.ToLower(k)] {
 			continue
 		}
 		out = append(out, [2]string{k, quote(cfg.Settings[k])})

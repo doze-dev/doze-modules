@@ -34,8 +34,21 @@ func (Driver) Type() string { return "postgres" }
 // NominalPort returns the socket-naming port the runtime should assign.
 func (Driver) NominalPort() int { return nominalPort }
 
-// Resolve implements engine.Driver.
+// Resolve implements engine.Driver: the Postgres toolchain, then every catalog
+// extension bundle the blocks decoded for this major declare (fetched, pinned
+// and, before Postgres 18, installed into the toolchain).
 func (Driver) Resolve(ctx context.Context, spec engine.VersionSpec, plat engine.Platform, lk engine.Locker, fetch engine.Fetcher) (engine.Toolchain, error) {
+	tc, err := resolveToolchain(ctx, spec, plat, lk, fetch)
+	if err != nil {
+		return tc, err
+	}
+	if err := ensureExtensions(ctx, &tc, majorNum(spec.String()), plat, lk, fetch); err != nil {
+		return engine.Toolchain{}, err
+	}
+	return tc, nil
+}
+
+func resolveToolchain(ctx context.Context, spec engine.VersionSpec, plat engine.Platform, lk engine.Locker, fetch engine.Fetcher) (engine.Toolchain, error) {
 	if dir := os.Getenv(envBinDir); dir != "" {
 		// Label the override with the declared spec so templating still has a
 		// stable key (the bindir is assumed to match the declared version).
@@ -103,6 +116,10 @@ func (Driver) Plan(_ context.Context, inst engine.Instance, tc engine.Toolchain)
 			Target:  fmt.Sprintf("%s -h %s -p %d -d postgres -U postgres", tc.Path("pg_isready"), inst.SocketDir, inst.Port),
 			Timeout: bootTimeout,
 		},
+	}
+	// Bundles that need environment (PostGIS: PROJ_DATA, GDAL_DATA) get it.
+	if cfg, err := pgConfig(inst); err == nil {
+		spec.Env = buildExtConf(cfg, tc, majorNum(inst.Version.String()), inst.Name).serverEnv()
 	}
 	return engine.SpawnPlan{Specs: []engine.SpawnSpec{spec}}, nil
 }

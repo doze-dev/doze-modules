@@ -13,10 +13,6 @@ import (
 	"github.com/doze-dev/doze-sdk/engine"
 )
 
-// extensionAliases maps friendly config names to the identifier CREATE
-// EXTENSION expects.
-var extensionAliases = map[string]string{"pgvector": "vector"}
-
 // logf reports convergence progress/warnings on stderr, which the plugin host
 // forwards into doze's logs. (An earlier exported Logf hook was never installed
 // by anything, so these messages silently vanished out-of-process.)
@@ -70,52 +66,8 @@ func (Driver) Converge(ctx context.Context, inst engine.Instance, tc engine.Tool
 	// 4. Extensions. A missing or failed extension fails convergence (and taints
 	// the instance) unless the block is marked `optional = true`, in which case it
 	// degrades to a warning — so a half-provisioned database never looks healthy.
-	inst2 := newInstaller(tc.Path("pg_config"))
-	for _, ext := range cfg.Extensions {
-		name := ext.Name
-		if alias, ok := extensionAliases[ext.Name]; ok {
-			name = alias
-		}
-		// soft reports a non-fatal condition: a warning if the extension is
-		// optional, otherwise a hard convergence error.
-		soft := func(format string, args ...any) error {
-			if ext.Optional {
-				logf("warning: "+format, args...)
-				return nil
-			}
-			return fmt.Errorf(format, args...)
-		}
-		if ext.Source != "" && !inst2.available(name) {
-			if err := inst2.install(name, resolveExtSource(cfg.BaseDir, ext.Source)); err != nil {
-				if e := soft("could not install extension %q for %q: %v", ext.Name, dbName, err); e != nil {
-					return e
-				}
-				continue
-			}
-			logf("installed extension %q into the Postgres toolchain", name)
-		}
-		if !inst2.available(name) {
-			if e := soft("extension %q is not available for %q (declare a `source` bundle, "+
-				"use a Postgres build that includes it, or set `optional = true`)", ext.Name, dbName); e != nil {
-				return e
-			}
-			continue
-		}
-		stmt := fmt.Sprintf("CREATE EXTENSION IF NOT EXISTS %s", sqlIdent(name))
-		if ext.Schema != "" {
-			stmt += " SCHEMA " + sqlIdent(ext.Schema)
-		}
-		if ext.Version != "" {
-			stmt += " VERSION " + sqlLit(ext.Version)
-		}
-		if ext.Cascade {
-			stmt += " CASCADE"
-		}
-		if err := psql.exec(ctx, dbName, stmt); err != nil {
-			if e := soft("CREATE EXTENSION %q for %q failed: %v", ext.Name, dbName, err); e != nil {
-				return e
-			}
-		}
+	if err := convergeExtensions(ctx, psql, inst, tc, cfg); err != nil {
+		return err
 	}
 
 	// 5. Grants.
@@ -395,3 +347,9 @@ func (p *psqlRunner) output(ctx context.Context, args []string) (string, error) 
 
 func sqlIdent(s string) string { return `"` + strings.ReplaceAll(s, `"`, `""`) + `"` }
 func sqlLit(s string) string   { return "'" + strings.ReplaceAll(s, "'", "''") + "'" }
+
+// scalar runs a one-value query and returns it trimmed.
+func (p *psqlRunner) scalar(ctx context.Context, db, sql string) (string, error) {
+	out, err := p.output(ctx, append(p.base(db), "-tAc", sql))
+	return strings.TrimSpace(out), err
+}

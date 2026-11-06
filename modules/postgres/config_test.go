@@ -153,7 +153,7 @@ postgres "app" {
   }
 }
 `)
-	kv := settings(pg)
+	kv := settings(pg, extConf{})
 	var listenIdx, workMemIdx = -1, -1
 	for i, p := range kv {
 		switch p[0] {

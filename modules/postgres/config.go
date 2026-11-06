@@ -254,23 +254,49 @@ func (Driver) DecodeConfig(body hcl.Body, ctx *hcl.EvalContext, baseDir string, 
 		c.Schemas = append(c.Schemas, Schema{Name: sc.Name, Owner: sc.Owner})
 	}
 
+	// Extensions: a contrib name, or a catalog name (aliases map to the CREATE
+	// EXTENSION name) supported on this major, or anything with its own source.
+	// optional = true lets an unknown name through to fail softly at converge.
+	major := majorNum(version.String())
 	extSeen := map[string]bool{}
+	addExt := func(ex Extension) error {
+		ex.Name = canonicalName(ex.Name)
+		if extSeen[ex.Name] {
+			return fmt.Errorf("extension %q is declared more than once", ex.Name)
+		}
+		extSeen[ex.Name] = true
+		if ex.Source == "" && !ex.Optional {
+			if err := checkExtension(ex.Name, major); err != nil {
+				return err
+			}
+		}
+		if _, ok := catalogExt(ex, major); ok {
+			if err := checkExtensionVersion(ex.Name, ex.Version); err != nil {
+				return err
+			}
+		}
+		c.Extensions = append(c.Extensions, ex)
+		return nil
+	}
 	for _, name := range raw.Extensions {
-		if !extSeen[name] {
-			extSeen[name] = true
-			c.Extensions = append(c.Extensions, Extension{Name: name})
+		if extSeen[canonicalName(name)] {
+			continue // the list shorthand tolerates repeats
+		}
+		if err := addExt(Extension{Name: name}); err != nil {
+			return nil, err
 		}
 	}
 	for _, ex := range raw.ExtensionBlocks {
 		if ex.Name == "" {
 			return nil, fmt.Errorf("extension block is missing a name label")
 		}
-		if extSeen[ex.Name] {
-			return nil, fmt.Errorf("extension %q is declared more than once", ex.Name)
+		if err := addExt(Extension{Name: ex.Name, Version: ex.Version, Schema: ex.Schema, Source: ex.Source, Optional: ex.Optional, Cascade: ex.Cascade}); err != nil {
+			return nil, err
 		}
-		extSeen[ex.Name] = true
-		c.Extensions = append(c.Extensions, Extension{Name: ex.Name, Version: ex.Version, Schema: ex.Schema, Source: ex.Source, Optional: ex.Optional, Cascade: ex.Cascade})
 	}
+	// Resolve (which fetches bundles) is told only the version, so remember
+	// what this block wants for it.
+	declareWanted(major, c)
 
 	for i, g := range raw.Grants {
 		grant, err := normalizeGrant(i, g)
