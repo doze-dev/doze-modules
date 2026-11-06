@@ -22,8 +22,9 @@ type VersionMismatchError struct {
 }
 
 func (e *VersionMismatchError) Error() string {
-	return fmt.Sprintf("instance %q: data directory is locked to Postgres %s but config declares version %s. "+
-		"Run `doze migrate %s` to upgrade.", e.Name, e.OnDisk, e.Declared, e.Name)
+	return fmt.Sprintf("instance %q: its data is Postgres %s's, but doze.hcl now says version %s, and Postgres cannot read another major's data. "+
+		"Keep version = %s for now; or move it: dump it while it is %s (pg_dumpall), then `doze reset %s`, set version = %s, and restore the dump",
+		e.Name, e.OnDisk, e.Declared, e.OnDisk, e.OnDisk, e.Name, e.Declared)
 }
 
 // provisioned reports whether a data dir has already been initialized.
