@@ -412,7 +412,7 @@ func placeFile(src, dest, key string, m bundleManifest, files map[string]ledgerE
 		// An older (or equal) version never replaces a newer one's file.
 		return false, nil
 	default:
-		logf("extension %s: %s %s replaces %s's %s", m.Name, m.Version, filepath.Base(dest), owner.Version, filepath.Base(dest))
+		logf("extension %s %s: replacing %s from %s", m.Name, m.Version, filepath.Base(dest), owner.Version)
 	}
 	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 		return false, err

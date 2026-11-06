@@ -122,6 +122,12 @@ func untar(data []byte, dest string) error {
 			return err
 		}
 		p := filepath.Join(dest, hdr.Name)
+		if hdr.Typeflag == tar.TypeDir {
+			if err := os.MkdirAll(p, 0o755); err != nil {
+				return err
+			}
+			continue
+		}
 		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 			return err
 		}
