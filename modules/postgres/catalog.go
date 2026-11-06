@@ -71,8 +71,9 @@ var catalog = []CatalogEntry{
 		Settings: map[string]string{"cron.database_name": "{db}", "cron.use_background_workers": "on"},
 		Homepage: "https://github.com/citusdata/pg_cron"},
 	{Name: "pg_partman", Wave: 1, Description: "Time- and serial-based partition management.",
-		License: "PostgreSQL", Line: "5.5", Majors: pg14to18, Preload: []string{"pg_partman_bgw"},
-		Settings: map[string]string{"pg_partman_bgw.dbname": "{db}"},
+		License: "PostgreSQL", Line: "5.5", Majors: pg14to18, MayPreload: []string{"pg_partman_bgw"},
+		// Not preloaded: 5.5's background worker runs as the role
+		// partman_maintainer and stops the server when it is missing.
 		Homepage: "https://github.com/pgpartman/pg_partman"},
 	{Name: "pgmq", Wave: 1, Description: "Lightweight message queues, like SQS, in tables.",
 		License: "PostgreSQL", Line: "1.13", Majors: pg14to18, Homepage: "https://github.com/pgmq/pgmq"},

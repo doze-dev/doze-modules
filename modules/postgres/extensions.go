@@ -404,6 +404,13 @@ func placeFile(src, dest, key string, m bundleManifest, files map[string]ledgerE
 		return false, err
 	}
 	owner, owned := files[key]
+	if have != "" && have != sum && vendoredLib(key) {
+		// A dependency the bundle carries (libpq, libssl, …) that the tree,
+		// or another bundle, already has: theirs is kept and serves both. The
+		// build links it by name through @loader_path/$ORIGIN, so either copy
+		// loads.
+		return false, nil
+	}
 	switch {
 	case have == "":
 		// new file
@@ -829,4 +836,15 @@ func createPlain(ctx context.Context, psql *psqlRunner, in *installer, cfg *Conf
 		return fmt.Errorf("CREATE EXTENSION %q for %q failed: %v", ext.Name, db, err)
 	}
 	return nil
+}
+
+// vendoredLib reports whether a bundle file is a dependency library carried
+// beside the extension's own module, rather than the module itself:
+// lib/lib*.so*, lib/lib*.dylib.
+func vendoredLib(key string) bool {
+	dir, base := filepath.Split(filepath.ToSlash(key))
+	if !strings.HasSuffix(strings.TrimSuffix(dir, "/"), "lib") || !strings.HasPrefix(base, "lib") {
+		return false
+	}
+	return strings.Contains(base, ".so") || strings.HasSuffix(base, ".dylib")
 }
