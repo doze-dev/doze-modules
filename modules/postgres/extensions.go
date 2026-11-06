@@ -292,6 +292,9 @@ type ledgerEntry struct {
 
 type ledger struct {
 	Files map[string]ledgerEntry `json:"files"` // "extension/x.control", "lib/x.so"
+	// Bundles are the bundle roots fully installed, so a resolve that finds
+	// its bundle here skips re-hashing every file.
+	Bundles map[string]bool `json:"bundles,omitempty"`
 }
 
 func installIntoToolchain(pgConfig string, b bundle) error {
@@ -329,6 +332,9 @@ func installInto(share, pkglib string, b bundle) error {
 			led.Files = map[string]ledgerEntry{}
 		}
 	}
+	if led.Bundles[b.Root] {
+		return nil
+	}
 	m := b.Manifest
 	changed := false
 	copyTree := func(srcDir, destDir, ledgerPrefix string) error {
@@ -355,6 +361,13 @@ func installInto(share, pkglib string, b bundle) error {
 	err = copyTree(filepath.Join(b.Root, "share", "extension"), extDir, "extension/")
 	if err == nil {
 		err = copyTree(filepath.Join(b.Root, "lib"), pkglib, "lib/")
+	}
+	if err == nil {
+		if led.Bundles == nil {
+			led.Bundles = map[string]bool{}
+		}
+		led.Bundles[b.Root] = true
+		changed = true
 	}
 	if changed {
 		data, _ := json.MarshalIndent(led, "", "  ")
