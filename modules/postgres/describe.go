@@ -75,7 +75,7 @@ func (Driver) Describe() engine.Description {
 			{Name: "max_connections", Type: "number", Default: "50", Desc: "max_connections server setting."},
 			{Name: "fsync", Type: "bool", Default: "false", Desc: "fsync server setting (off for the dev tuning profile)."},
 			{Name: "autovacuum", Type: "bool", Default: "true", Desc: "autovacuum server setting."},
-			{Name: "extensions", Type: "list(string)", Desc: "Shorthand list of extensions to CREATE (or use extension blocks)."},
+			{Name: "extensions", Type: "list(string)", Desc: "Extensions to CREATE: contrib names (pg_trgm, hstore, …) or doze's catalog (vector, pg_cron, postgis, timescaledb, …), fetched and pinned in doze.lock. Or use extension blocks."},
 			{Name: "settings", Type: "map(string)", Desc: "Arbitrary postgresql.conf settings, applied verbatim."},
 		},
 		Blocks: []engine.ConfigBlock{
@@ -97,10 +97,10 @@ func (Driver) Describe() engine.Description {
 			{Name: "schema", Label: "name", Desc: "A schema within the database.", Args: []engine.ConfigArg{
 				{Name: "owner", Type: "string", Desc: "Role that owns the schema."},
 			}},
-			{Name: "extension", Label: "name", Desc: "A Postgres extension to install (pgvector, postgis, …).", Args: []engine.ConfigArg{
-				{Name: "version", Type: "string", Desc: "Specific extension version."},
+			{Name: "extension", Label: "name", Desc: "A Postgres extension: contrib, or one from doze's catalog (see Extensions), fetched for this major and platform.", Args: []engine.ConfigArg{
+				{Name: "version", Type: "string", Desc: "For a catalog extension, a pin: a line (\"0.8\") or a release (\"0.8.1\"); a newer pin updates the extension in place. For contrib, the SQL version to CREATE."},
 				{Name: "schema", Type: "string", Desc: "Schema to install the extension into."},
-				{Name: "source", Type: "string", Desc: "Path to a local extension bundle to install from."},
+				{Name: "source", Type: "string", Desc: "URL or path of a bundle (.tar.gz with share/ and lib/), for an extension outside the catalog."},
 				{Name: "optional", Type: "bool", Default: "false", Desc: "Skip (don't fail) if the extension is unavailable."},
 				{Name: "cascade", Type: "bool", Default: "false", Desc: "CREATE EXTENSION … CASCADE for dependencies."},
 			}},
@@ -114,3 +114,10 @@ func (Driver) Describe() engine.Description {
 		},
 	}
 }
+
+// ExtensionCatalog is the extension catalog for the registry's postgres page:
+// each extension with what it is for, its licence, the majors it is built for
+// and whether it preloads. engine.Description has no field for it, so `dzm meta`
+// writes it beside meta.yaml as extensions.yaml, and the plugin prints it as
+// JSON for `postgres-plugin __catalog` (for tools that hold only the binary).
+func (Driver) ExtensionCatalog() []CatalogEntry { return Catalog() }

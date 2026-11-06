@@ -3,8 +3,11 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/doze-dev/doze-sdk/engine"
 	"github.com/doze-dev/doze-sdk/modtool"
@@ -25,12 +28,12 @@ import (
 // resolves. Coverage is mandatory: dzm (build) and dzm meta both fail on a
 // modules.yaml entry with no describer.
 var describers = map[string]engine.Describer{
-	"ferret":         ferret.Driver{},
-	"kvrocks":        kvrocks.Driver{},
-	"mariadb":        mariadb.Driver{},
-	"postgres":       postgres.Driver{},
-	"temporal":       temporal.Driver{},
-	"valkey":         valkey.Driver{},
+	"ferret":   ferret.Driver{},
+	"kvrocks":  kvrocks.Driver{},
+	"mariadb":  mariadb.Driver{},
+	"postgres": postgres.Driver{},
+	"temporal": temporal.Driver{},
+	"valkey":   valkey.Driver{},
 }
 
 // runMeta generates meta.yaml for each module (via the SDK's modtool, the same
@@ -68,6 +71,33 @@ func runMeta(args []string) error {
 			return err
 		}
 		fmt.Printf("wrote %s\n", filepath.Join(*out, name, "meta.yaml"))
+		if cp, ok := describers[name].(extensionCataloger); ok {
+			path, err := writeExtensionCatalog(*out, name, cp)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("wrote %s\n", path)
+		}
 	}
 	return nil
+}
+
+// extensionCataloger is a driver that publishes an extension catalog (the
+// postgres module). engine.Description has no field for it, so it is written
+// beside meta.yaml as extensions.yaml for the registry's Extensions table.
+type extensionCataloger interface {
+	ExtensionCatalog() []postgres.CatalogEntry
+}
+
+func writeExtensionCatalog(out, name string, cp extensionCataloger) (string, error) {
+	data, err := yaml.Marshal(map[string]any{"extensions": cp.ExtensionCatalog()})
+	if err != nil {
+		return "", err
+	}
+	dir := filepath.Join(out, name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return "", err
+	}
+	path := filepath.Join(dir, "extensions.yaml")
+	return path, os.WriteFile(path, data, 0o644)
 }
