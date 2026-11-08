@@ -1,5 +1,8 @@
 # doze-modules
 
+> [!WARNING]
+> **Still in active development.** This project is not cleared for use yet. Expect breaking changes, and do not rely on it for real work.
+
 Out-of-process engine **plugins** for [doze](https://github.com/doze-dev/doze).
 Each module is a pure-Go plugin binary that speaks doze's engine gRPC protocol;
 doze fetches one by engine type from the **signed registry**, verifies the
