@@ -22,7 +22,7 @@ func TestReadmeTableCurrent(t *testing.T) {
 	}
 	// Every module appears, linked.
 	for name := range describers {
-		if !strings.Contains(string(b), "[`"+name+"`]("+registryBase+"/"+name+")") {
+		if !strings.Contains(string(b), "[`"+name+"`]("+registryBase+"/"+name+"/)") {
 			t.Errorf("README table is missing module %q", name)
 		}
 	}

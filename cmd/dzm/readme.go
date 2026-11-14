@@ -16,7 +16,7 @@ const (
 )
 
 // registryBase is where each module's docs page lives.
-const registryBase = "https://doze.nerdmenot.in/registry/doze"
+const registryBase = "https://doze-dev.com/registry/doze"
 
 // runReadme regenerates the module table in README.md from the describers map —
 // the same source the registry docs and the signed engine-support lists come
@@ -75,7 +75,7 @@ func moduleTable() string {
 		if len(d.Versions) > 0 {
 			versions = strings.Join(d.Versions, " · ")
 		}
-		fmt.Fprintf(&b, "| [`%s`](%s/%s) | %s | %s | %s |\n",
+		fmt.Fprintf(&b, "| [`%s`](%s/%s/) | %s | %s | %s |\n",
 			name, registryBase, name, d.Category, versions, d.Tagline)
 	}
 	return b.String()
